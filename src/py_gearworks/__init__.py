@@ -1,15 +1,15 @@
 from importlib.metadata import version, PackageNotFoundError
-from gggears.curve import *
-from gggears.defs import *
-from gggears.function_generators import *
-from src.gggears.conv_spline import *
-from src.gggears.core import *
-from src.gggears.conv_build123d import *
-from src.gggears.wrapper import *
-from gggears.gearmath import *
+from py_gearworks.curve import *
+from py_gearworks.defs import *
+from py_gearworks.function_generators import *
+from py_gearworks.conv_spline import *
+from py_gearworks.core import *
+from py_gearworks.conv_build123d import *
+from py_gearworks.wrapper import *
+from py_gearworks.gearmath import *
 
 
 try:
-    __version__ = version("gggears")
+    __version__ = version("py_gearworks")
 except PackageNotFoundError:
     __version__ = "unknown version"

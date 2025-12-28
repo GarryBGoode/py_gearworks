@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gggears.curve as crv
+import py_gearworks.curve as crv
 import matplotlib.pyplot as plt
 import numpy as np
-from gggears.defs import *
+from py_gearworks.defs import *
 import pytest as pytest
 
 

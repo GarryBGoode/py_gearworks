@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import src.gggears.core as gg
+import py_gearworks.core as gg
 import numpy as np
-import gggears.curve as crv
+import py_gearworks.curve as crv
 from scipy.optimize import minimize
-from gggears.defs import *
-from gggears.function_generators import *
+from py_gearworks.defs import *
+from py_gearworks.function_generators import *
 import dataclasses
 from typing import Union, List
 import time

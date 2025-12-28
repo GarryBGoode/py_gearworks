@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QUrl, Qt
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6 import QtWebEngineCore
-import gggears as gg
+import py_gearworks as gg
 import build123d as bd
 import numpy as np
 from ocp_vscode import show, set_port, Camera, set_defaults, Animation

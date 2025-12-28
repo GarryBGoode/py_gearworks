@@ -1,7 +1,7 @@
-from src.gggears.base_classes import *
-from gggears.function_generators import *
-from gggears import curve as crv
-from gggears.defs import *
+from py_gearworks.base_classes import *
+from py_gearworks.function_generators import *
+from py_gearworks import curve as crv
+from py_gearworks.defs import *
 from scipy.optimize import root, minimize
 from scipy.spatial.transform import Rotation as scp_Rotation
 

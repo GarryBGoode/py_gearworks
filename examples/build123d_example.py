@@ -1,4 +1,4 @@
-import gggears as gg
+import py_gearworks as gg
 from build123d import *
 from ocp_vscode import *
 
@@ -21,7 +21,7 @@ gear2 = gg.HelicalGear(
 )
 gear1.mesh_to(gear2, target_dir=gg.DOWN)
 
-# gggears uses numpy arrays for vectors, build123d uses its own Vector class
+# py_gearworks uses numpy arrays for vectors, build123d uses its own Vector class
 # np2v() is shorthand for nppoint2Vector(), which makes the conversion
 gear1_center_vector = gg.np2v(gear1.center)
 gear2_center_vector = gg.np2v(gear2.center)

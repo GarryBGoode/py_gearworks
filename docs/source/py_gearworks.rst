@@ -1,10 +1,10 @@
-gggears package
+py_gearworks package
 ===============
 
 Module contents
 ---------------
 
-.. automodule:: gggears
+.. automodule:: py_gearworks
    :members:
    :undoc-members:
    :show-inheritance:
@@ -13,66 +13,66 @@ Module contents
 Submodules
 ----------
 
-gggears.curve module
+py_gearworks.curve module
 --------------------
 
-.. automodule:: gggears.curve
+.. automodule:: py_gearworks.curve
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.defs module
+py_gearworks.defs module
 -------------------
 
-.. automodule:: gggears.defs
+.. automodule:: py_gearworks.defs
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.function\_generators module
+py_gearworks.function_generators module
 -----------------------------------
 
-.. automodule:: gggears.function_generators
+.. automodule:: py_gearworks.function_generators
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.gggears\_build123d module
+py_gearworks.conv_build123d module
 ---------------------------------
 
-.. automodule:: gggears.gggears_build123d
+.. automodule:: py_gearworks.conv_build123d
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.gggears\_convert module
+py_gearworks.conv_spline module
 -------------------------------
 
-.. automodule:: gggears.gggears_convert
+.. automodule:: py_gearworks.conv_spline
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.gggears\_core module
+py_gearworks.core module
 ----------------------------
 
-.. automodule:: gggears.gggears_core
+.. automodule:: py_gearworks.core
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.gearmath module
+py_gearworks.gearmath module
 ----------------------------
 
-.. automodule:: gggears.gearmath
+.. automodule:: py_gearworks.gearmath
    :members:
    :undoc-members:
    :show-inheritance:
 
-gggears.gggears\_wrapper module
+py_gearworks.wrapper module
 -------------------------------
 
-.. automodule:: gggears.gggears_wrapper
+.. automodule:: py_gearworks.wrapper
    :members:
    :undoc-members:
    :show-inheritance:

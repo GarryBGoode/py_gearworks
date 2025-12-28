@@ -1,10 +1,10 @@
 import dataclasses
 import copy
-import gggears.curve as crv
+import py_gearworks.curve as crv
 import numpy as np
-from gggears.defs import *
+from py_gearworks.defs import *
 from scipy.spatial.transform import Rotation as scp_Rotation
-from gggears.function_generators import angle_between_vector_and_plane
+from py_gearworks.function_generators import angle_between_vector_and_plane
 
 # If a dataclass tends to be user input, it should be named param.
 # If a dataclass tends to be generated or manipulated by functions,

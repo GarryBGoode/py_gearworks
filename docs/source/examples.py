@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from build123d import *
-from gggears import *
+from py_gearworks import *
 from ocp_vscode import show, set_port
 
 # set_port(3939)

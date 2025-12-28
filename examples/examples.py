@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gggears import *
+from py_gearworks import *
 from ocp_vscode import show, set_port
 import time
 import logging

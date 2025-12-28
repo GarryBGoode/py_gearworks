@@ -1,4 +1,4 @@
-import gggears as gg
+import py_gearworks as gg
 from build123d import *
 from ocp_vscode import *
 import numpy as np

@@ -1,9 +1,9 @@
-.. gggears documentation master file, created by
+.. py_gearworks documentation master file, created by
    sphinx-quickstart on Tue Nov 19 11:06:17 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to gggears's documentation!
+Welcome to py_gearworks's documentation!
 ===================================
 
 .. toctree::
@@ -13,7 +13,7 @@ Welcome to gggears's documentation!
    intro
    examples
    build123d_examples
-   gggears
+   py_gearworks
    
 
 

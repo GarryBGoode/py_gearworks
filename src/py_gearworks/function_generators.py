@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import numpy as np
-from gggears.defs import *
+from py_gearworks.defs import *
 from scipy.spatial.transform import Rotation as scp_Rotation
 from scipy.special import comb
 

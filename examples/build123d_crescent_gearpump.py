@@ -1,4 +1,4 @@
-import gggears as gg
+import py_gearworks as gg
 from build123d import *
 from ocp_vscode import *
 import numpy as np
@@ -52,13 +52,14 @@ with BuildPart() as gearpart1:
         Hole(radius=axis_diameter / 2)
 
 
-gear1.mesh_to(gear2)
+gear1.mesh_to(gear2, backlash=clearence, angle_bias=1.0)
 # adjustment for backlash / fitting
-delta1 = gg.calc_involute_mesh_distance(
-    gear1, gear2, clearence * 0
-) - gg.calc_nominal_mesh_distance(gear1, gear2)
+# delta1 = gg.calc_involute_mesh_distance(
+#     gear1, gear2, clearence * 0
+# ) - gg.calc_nominal_mesh_distance(gear1, gear2)
+# delta1 = 0.0
 # gear1.center += gg.LEFT * delta1
-gear1.angle += delta1 / gear1.r_base * 0
+# gear1.angle += delta1 / gear1.r_base * 0
 
 gearpart1.part.label = "gear1"
 gearpart1.part.location = gear1.center_location_middle
@@ -213,6 +214,8 @@ anim_collector = Compound(
             housing_bottom.part,
             crescent.part,
             housing_top.part,
+            line_of_action_1,
+            line_of_action_2,
         ]
     ),
     label="assembly",

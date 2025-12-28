@@ -10,11 +10,11 @@
 # limitations under the License.
 
 import numpy as np
-from src.gggears.core import *
-from src.gggears.conv_build123d import *
+from py_gearworks.core import *
+from py_gearworks.conv_build123d import *
 from build123d import Part
-from gggears.gearteeth import *
-from gggears.gearmath import *
+from py_gearworks.gearteeth import *
+from py_gearworks.gearmath import *
 
 
 class GearInfoMixin:
@@ -2060,7 +2060,7 @@ class InvoluteRack:
 
     Notes
     -----
-    Racks are not yet integrated into the class hierarchy of gggears like InvoluteGears.
+    Racks are not yet integrated into the class hierarchy of py_gearworks like InvoluteGears.
     This would take substantial effort, abstraction and refactoring.
 
     Position and orientation behavior: By convention, the reference point of the rack is
@@ -2295,7 +2295,7 @@ class HelicalRack(InvoluteRack):
 
     Notes
     -----
-    Racks are not yet integrated into the class hierarchy of gggears like InvoluteGears.
+    Racks are not yet integrated into the class hierarchy of py_gearworks like InvoluteGears.
     This would take substantial effort, abstraction and refactoring.
 
     Position and orientation behavior: By convention, the reference point of the rack is

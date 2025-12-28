@@ -7,16 +7,14 @@
 import os
 import sys
 
-# import gggears
-
 sys.path.insert(0, os.path.abspath("../../src"))
-sys.path.insert(0, os.path.abspath("../../src/gggears"))
+sys.path.insert(0, os.path.abspath("../../src/py_gearworks"))
 
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "gggears"
+project = "py_gearworks"
 copyright = "2024, Gergely Bencsik"
 author = "Gergely Bencsik"
 release = "0.1"

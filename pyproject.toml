@@ -1,5 +1,5 @@
 [project]
-name = "gggears"
+name = "py_gearworks"
 dynamic = ["version"]
 description = "A gear geometry generator in Python"
 authors = [
@@ -44,9 +44,9 @@ extras = [
 ]
 
 all = [
-    "gggears[dev]",
-    "gggears[ocp_vscode]",
-    "gggears[extras]",
+    "py_gearworks[dev]",
+    "py_gearworks[ocp_vscode]",
+    "py_gearworks[extras]",
 ]
 
 [build-system]
@@ -58,11 +58,11 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["gggears"]
+packages = ["py_gearworks"]
 package-dir = {"" = "src"}
 
 [tool.setuptools_scm]
-write_to = "src/gggears/_version.py"
+write_to = "src/py_gearworks/_version.py"
 
 [tool.black]
 target-version = ["py310", "py311", "py312", "py313"]
