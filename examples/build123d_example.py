@@ -1,30 +1,29 @@
-import py_gearworks as gg
+import py_gearworks as pgw
 from build123d import *
 from ocp_vscode import *
 
-set_port(3939)
 
 # this example demonstrates how to create a simple pair of gears and
 # add additional features to them, and then assemble them on a baseplate
 gearmodule = 2
-gearheight = 4
+gearheight = 20
 bore_diameter = 5
-pin_diamaeter = 2
+pin_diameter = 2
 sleeve_height = 7
-sleeve_thickness = 1
+sleeve_thickness = 3
 
-gear1 = gg.HelicalGear(
-    number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=gg.PI / 12
+gear1 = pgw.HelicalGear(
+    number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=pgw.PI / 12
 )
-gear2 = gg.HelicalGear(
-    number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-gg.PI / 12
+gear2 = pgw.HelicalGear(
+    number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-pgw.PI / 12
 )
-gear1.mesh_to(gear2, target_dir=gg.DOWN)
+gear1.mesh_to(gear2, target_dir=pgw.DOWN)
 
 # py_gearworks uses numpy arrays for vectors, build123d uses its own Vector class
 # np2v() is shorthand for nppoint2Vector(), which makes the conversion
-gear1_center_vector = gg.np2v(gear1.center)
-gear2_center_vector = gg.np2v(gear2.center)
+gear1_center_vector = pgw.np2v(gear1.center)
+gear2_center_vector = pgw.np2v(gear2.center)
 axial_distance_vector = gear1_center_vector - gear2_center_vector
 
 with BuildPart() as gear1_part:
@@ -41,13 +40,13 @@ with BuildPart() as gear1_part:
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
         loc_pin_hole = Location(
-            Vector(0, 0, sleeve_height - pin_diamaeter * 3 / 2),
+            Vector(0, 0, sleeve_height - pin_diameter * 3 / 2),
             (0, 90, 0),
         )
         # Holes with depth=None mean through all the way
         Hole(bore_diameter / 2, depth=None)
         with Locations([loc_pin_hole]):
-            Hole(pin_diamaeter / 2, depth=None)
+            Hole(pin_diameter / 2, depth=None)
     # revolute joint seems fitting, but rigid could be used as well,
     # since gear rotation animation or simulation is not implemented
     RevoluteJoint(
@@ -67,13 +66,13 @@ with BuildPart() as gear2_part:
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
         loc_pin_hole = Location(
-            Vector(0, 0, sleeve_height - pin_diamaeter * 3 / 2),
+            Vector(0, 0, sleeve_height - pin_diameter * 3 / 2),
             (0, 90, 0),
         )
         # Holes with depth=None mean through all the way
         Hole(bore_diameter / 2, depth=None)
         with Locations([loc_pin_hole]):
-            Hole(pin_diamaeter / 2, depth=None)
+            Hole(pin_diameter / 2, depth=None)
 
     RevoluteJoint(
         "gear_axis",

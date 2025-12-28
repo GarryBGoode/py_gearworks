@@ -1,4 +1,4 @@
-import py_gearworks as gg
+import py_gearworks as pgw
 from build123d import *
 from ocp_vscode import *
 import numpy as np
@@ -9,10 +9,10 @@ n2 = 33
 gamma1 = np.arctan2(n1, n2)
 gamma2 = np.pi / 2 - gamma1
 
-gear1 = gg.BevelGear(
+gear1 = pgw.BevelGear(
     number_of_teeth=n1, cone_angle=gamma1 * 2, helix_angle=np.pi / 6, height=5
 )
-gear2 = gg.BevelGear(
+gear2 = pgw.BevelGear(
     number_of_teeth=n2, cone_angle=gamma2 * 2, helix_angle=-np.pi / 6, height=5
 )
 
@@ -44,7 +44,7 @@ animation.add_track("/gears/gear2", "rz", time_track, gear2_track)
 # respect that location - which may include complex translation and re-orientation.
 # That is why mesh_to() method needs to be called after the animation tracks are defined,
 # and applied to the Compound after creation.
-gear1.mesh_to(gear2, target_dir=gg.LEFT)
+gear1.mesh_to(gear2, target_dir=pgw.LEFT)
 a_gear1.location = gear1.center_location_bottom
 a_gear2.location = gear2.center_location_bottom
 

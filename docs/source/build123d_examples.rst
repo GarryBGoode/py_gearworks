@@ -30,7 +30,7 @@ Highlights:
 
 ::
 
-    import py_gearworks as gg
+    import py_gearworks as pgw
     from build123d import *
     from ocp_vscode import *
 
@@ -45,18 +45,18 @@ Highlights:
     sleeve_height = 7
     sleeve_thickness = 1
 
-    gear1 = gg.HelicalGear(
-        number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=gg.PI / 12
+    gear1 = pgw.HelicalGear(
+        number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=pgw.PI / 12
     )
-    gear2 = gg.HelicalGear(
-        number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-gg.PI / 12
+    gear2 = pgw.HelicalGear(
+        number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-pgw.PI / 12
     )
-    gear1.mesh_to(gear2, target_dir=gg.DOWN)
+    gear1.mesh_to(gear2, target_dir=pgw.DOWN)
 
     # py_gearworks uses numpy arrays for vectors, build123d uses its own Vector class
     # np2v() is shorthand for nppoint2Vector(), which makes the conversion
-    gear1_center_vector = gg.np2v(gear1.center)
-    gear2_center_vector = gg.np2v(gear2.center)
+    gear1_center_vector = pgw.np2v(gear1.center)
+    gear2_center_vector = pgw.np2v(gear2.center)
     axial_distance_vector = gear1_center_vector - gear2_center_vector
 
     with BuildPart() as gear1_part:
@@ -158,7 +158,7 @@ Highlights:
 
 ::
 
-    import py_gearworks as gg
+    import py_gearworks as pgw
     from build123d import *
     from ocp_vscode import *
 
@@ -170,14 +170,14 @@ Highlights:
     gearmodule = 2
     wall_thickness = 3
 
-    gear1 = gg.SpurGear(
+    gear1 = pgw.SpurGear(
         number_of_teeth=17,
         module=gearmodule,
         height=gearheight,
         addendum_coefficient=1.0,
         z_anchor=0.5,
     )
-    gear2 = gg.SpurRingGear(
+    gear2 = pgw.SpurRingGear(
         number_of_teeth=23,
         module=gearmodule,
         height=gearheight,
@@ -189,7 +189,7 @@ Highlights:
         angle=0.135,
     )
     gear1.mesh_to(gear2)
-    gear1.center += gg.LEFT * 0.1
+    gear1.center += pgw.LEFT * 0.1
 
     with BuildPart() as gearpart1:
         gear1.build_part()
@@ -255,17 +255,17 @@ Highlights:
 
 
     # indicator sketches
-    addendum_circle_1 = gg.arc_to_b123d(gear1.radii_data_top.r_a_curve)
-    addendum_circle_2 = gg.arc_to_b123d(gear2.radii_data_top.r_a_curve)
+    addendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_a_curve)
+    addendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_a_curve)
 
     # involute base circle is not in the radii data
     # because radii data was meant to be generic and apply to other gears
-    base_circle_1 = gg.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
-    base_circle_2 = gg.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
+    base_circle_1 = pgw.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
+    base_circle_2 = pgw.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
 
-    loa1, loa2 = gg.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
-    line_of_action_1 = gg.line_to_b123d(loa1)
-    line_of_action_2 = gg.line_to_b123d(loa2)
+    loa1, loa2 = pgw.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
+    line_of_action_1 = pgw.line_to_b123d(loa1)
+    line_of_action_2 = pgw.line_to_b123d(loa2)
 
     # coloring
     line_of_action_1.color = (1, 0.2, 0.2)

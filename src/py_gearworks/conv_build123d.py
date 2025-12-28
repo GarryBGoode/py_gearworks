@@ -37,7 +37,7 @@ class GearBuilder(GearToNurbs):
 
     Parameters
     ----------
-    gear : gg.Gear
+    gear : pgw.Gear
         The gear object to build.
     n_points_hz : int, optional
         Number of points used for spline approximation for each segment of the 2D gear
@@ -58,7 +58,7 @@ class GearBuilder(GearToNurbs):
 
     def __init__(
         self,
-        gear: gg.Gear,
+        gear: pgw.Gear,
         n_points_hz: int = 4,
         n_points_vert: int = 4,
         oversampling_ratio: float = 3,
@@ -311,7 +311,7 @@ class GearBuilder_old(GearToNurbs):
 
     def __init__(
         self,
-        gear: gg.Gear,
+        gear: pgw.Gear,
         n_points_hz=4,
         n_points_vert=4,
         oversampling_ratio=2.5,
@@ -466,7 +466,7 @@ def apply_transform_part(part: bd.Part, transform: GearTransform):
     return part2
 
 
-def apply_animation(gear: gg.Gear, part: bd.Part, time: float = 1):
+def apply_animation(gear: pgw.Gear, part: bd.Part, time: float = 1):
     pass
 
 

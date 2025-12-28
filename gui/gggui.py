@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QUrl, Qt
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6 import QtWebEngineCore
-import py_gearworks as gg
+import py_gearworks as pgw
 import build123d as bd
 import numpy as np
 from ocp_vscode import show, set_port, Camera, set_defaults, Animation
@@ -118,10 +118,10 @@ class InputArgPanel(QWidget):
                     if "angle" in key:
                         input_widget.setDecimals(1)
                         input_widget.valueChanged.connect(
-                            lambda val, k=key: self.update_dict(k, val * gg.PI / 180)
+                            lambda val, k=key: self.update_dict(k, val * pgw.PI / 180)
                         )
                         if value != inspect.Parameter.empty:
-                            input_widget.setValue(value / gg.PI * 180)
+                            input_widget.setValue(value / pgw.PI * 180)
                     else:
                         input_widget.valueChanged.connect(
                             lambda val, k=key: self.update_dict(k, val)
@@ -244,9 +244,9 @@ class MainWindow(QMainWindow):
         # Set the central widget of the Window. Widget will expand
         # to take up all the space in the window by default.
         self.setCentralWidget(widget)
-        self.gear1: gg.GearInfoMixin
-        self.gear2: gg.GearInfoMixin
-        self.gearparts = [gg.Part(), gg.Part()]
+        self.gear1: pgw.GearInfoMixin
+        self.gear2: pgw.GearInfoMixin
+        self.gearparts = [pgw.Part(), pgw.Part()]
         self.geargen_finished = [False, False]
 
     def generate_gear_left(self):
@@ -332,7 +332,7 @@ class MainWindow(QMainWindow):
         self.right_layout.insertWidget(index, self.numpanel_right)
 
     def clear_gears(self):
-        self.gearparts = [gg.Part(), gg.Part()]
+        self.gearparts = [pgw.Part(), pgw.Part()]
         self.geargen_finished = [False, False]
         show(self.gearparts, reset_camera=Camera.RESET)
         self.animatebutton.setEnabled(False)
@@ -381,11 +381,11 @@ class MainWindow(QMainWindow):
         )
         if self.geargen_finished[0]:
             if "STEP" in chosen_filter:
-                gg.export_step(self.gearparts[0], name)
+                pgw.export_step(self.gearparts[0], name)
             elif "STL" in chosen_filter:
-                gg.export_stl(self.gearparts[0], name)
+                pgw.export_stl(self.gearparts[0], name)
             elif "GLTF" in chosen_filter:
-                gg.export_gltf(self.gearparts[0], name)
+                pgw.export_gltf(self.gearparts[0], name)
 
     def file_save_2(self):
         name, chosen_filter = QFileDialog.getSaveFileName(
@@ -395,11 +395,11 @@ class MainWindow(QMainWindow):
         )
         if self.geargen_finished[1]:
             if "STEP" in chosen_filter:
-                gg.export_step(self.gearparts[1], name)
+                pgw.export_step(self.gearparts[1], name)
             elif "STL" in chosen_filter:
-                gg.export_stl(self.gearparts[1], name)
+                pgw.export_stl(self.gearparts[1], name)
             elif "GLTF" in chosen_filter:
-                gg.export_gltf(self.gearparts[1], name)
+                pgw.export_gltf(self.gearparts[1], name)
 
 
 ocp_view_process = subprocess.Popen(
