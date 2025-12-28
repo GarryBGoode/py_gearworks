@@ -12,12 +12,12 @@ limitations under the License.
 
 """
 
-from gggears.gggears_core import *
+from src.gggears.core import *
 from gggears.function_generators import *
 from gggears.curve import *
 import build123d as bd
-from gggears.gggears_convert import *
-from gggears.gggears_base_classes import *
+from src.gggears.conv_spline import *
+from src.gggears.base_classes import *
 from scipy.spatial.transform import Rotation as scp_Rotation
 import numpy as np
 import time

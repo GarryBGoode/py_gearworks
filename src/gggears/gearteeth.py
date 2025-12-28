@@ -1,4 +1,4 @@
-from gggears.gggears_base_classes import *
+from src.gggears.base_classes import *
 from gggears.function_generators import *
 from gggears import curve as crv
 from gggears.defs import *

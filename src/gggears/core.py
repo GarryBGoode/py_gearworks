@@ -11,7 +11,7 @@
 
 from gggears.function_generators import *
 from gggears.defs import *
-from gggears.gggears_base_classes import *
+from src.gggears.base_classes import *
 from gggears.gearmath import *
 import gggears.curve as crv
 

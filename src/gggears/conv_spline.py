@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gggears.gggears_core as gg
+import src.gggears.core as gg
 import numpy as np
 import gggears.curve as crv
 from scipy.optimize import minimize

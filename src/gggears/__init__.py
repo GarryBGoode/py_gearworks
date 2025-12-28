@@ -2,10 +2,10 @@ from importlib.metadata import version, PackageNotFoundError
 from gggears.curve import *
 from gggears.defs import *
 from gggears.function_generators import *
-from gggears.gggears_convert import *
-from gggears.gggears_core import *
-from gggears.gggears_build123d import *
-from gggears.gggears_wrapper import *
+from src.gggears.conv_spline import *
+from src.gggears.core import *
+from src.gggears.conv_build123d import *
+from src.gggears.wrapper import *
 from gggears.gearmath import *
 
 

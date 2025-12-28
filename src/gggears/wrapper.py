@@ -10,8 +10,8 @@
 # limitations under the License.
 
 import numpy as np
-from gggears.gggears_core import *
-from gggears.gggears_build123d import *
+from src.gggears.core import *
+from src.gggears.conv_build123d import *
 from build123d import Part
 from gggears.gearteeth import *
 from gggears.gearmath import *
