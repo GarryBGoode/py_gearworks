@@ -691,15 +691,26 @@ class InvoluteGear(GearInfoMixin):
                 gear2_inside_ring=other.inside_teeth,
             )
         else:
-            distance = calc_involute_mesh_distance(
-                self.r_base,
-                other.r_base,
-                -self.angle_base,
-                -other.angle_base,
-                other.pitch_angle,
-                inside_ring=self.inside_teeth or other.inside_teeth,
-                backlash=backlash,
-            )
+            if np.abs(self.beta + other.beta) > 1e-6:
+                distance = calc_nominal_mesh_distance(
+                    self.rp,
+                    other.rp,
+                    self.inputparam.profile_shift,
+                    other.inputparam.profile_shift,
+                    self.module,
+                    self.inputparam.inside_teeth,
+                    other.inputparam.inside_teeth,
+                )
+            else:
+                distance = calc_involute_mesh_distance(
+                    self.r_base,
+                    other.r_base,
+                    -self.angle_base,
+                    -other.angle_base,
+                    other.pitch_angle,
+                    inside_ring=self.inside_teeth or other.inside_teeth,
+                    backlash=backlash,
+                )
             v0 = target_dir * distance + other.gearcore.transform.center
             self.gearcore.transform.center = v0
             self.gearcore.transform.orientation = other.gearcore.transform.orientation

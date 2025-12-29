@@ -139,9 +139,7 @@ class InvoluteUndercutTooth(InvoluteTooth):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.CurveChain:
@@ -214,10 +212,7 @@ class OctoidTooth(GearToothConicGenerator):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        else:
-            self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.Curve:
@@ -279,9 +274,7 @@ class OctoidUndercutTooth(GearToothConicGenerator):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.Curve:

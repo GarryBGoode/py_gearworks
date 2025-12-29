@@ -25,11 +25,35 @@ logging.basicConfig(
 
 def spur_gears():
 
-    gear1 = SpurGear(number_of_teeth=12, profile_shift=0.0)
-    gear2 = SpurGear(number_of_teeth=24, enable_undercut=True, root_fillet=0.0)
-    gear1.mesh_to(gear2, target_dir=UP)
+    # create 2 spur gears
+    gear1 = SpurGear(
+        number_of_teeth=12,
+        module=2,
+        height=4,
+        profile_shift=0.3,
+    )
+    gear2 = SpurGear(
+        number_of_teeth=23,
+        module=2,
+        height=4,
+    )
+
+    # move and align gear 1 next to gear 2 in the Y direction
+    # backlash can be optionally specified
+    # angle_bias conrtols location within backlash range (-1 to 1)
+    gear1.mesh_to(gear2, target_dir=UP, backlash=0.2, angle_bias=1)
+
+    # generate build123d Part objects
     gear_part_1 = gear1.build_part()
     gear_part_2 = gear2.build_part()
+
+    # center-bores are recommended to be added separately via build123d workflow
+    # center_location_top is a build123d location object
+    # multiplying with a location means placement at that location
+    hole_obj_1 = gear1.center_location_top * Hole(radius=2, depth=4)
+    gear_part_1 = gear_part_1.cut(hole_obj_1)
+    hole_obj_2 = gear2.center_location_top * Hole(radius=2, depth=4)
+    gear_part_2 = gear_part_2.cut(hole_obj_2)
     return (gear_part_1, gear_part_2)
 
 
@@ -438,4 +462,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gear_backlash(), deviation=0.05, angular_tolerance=0.1)
+    show(spur_gears(), deviation=0.05, angular_tolerance=0.1)
