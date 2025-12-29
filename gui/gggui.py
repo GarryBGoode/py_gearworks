@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
         save_button_right = QPushButton("Save2!")
         save_button_right.clicked.connect(self.file_save_2)
 
-        cls = getattr(gg, geartypes[0])
+        cls = getattr(pgw, geartypes[0])
         sig = inspect.signature(cls)
         sig2 = inspect.signature(cls)
 
@@ -264,7 +264,7 @@ class MainWindow(QMainWindow):
             else:
                 keyword_args[key] = dict[key]
 
-        cls = getattr(gg, self.gear_selector_left.currentText())
+        cls = getattr(pgw, self.gear_selector_left.currentText())
 
         self.gear1 = cls(*positional_args, **keyword_args)
         gearpart = self.gear1.build_part()
@@ -295,7 +295,7 @@ class MainWindow(QMainWindow):
             else:
                 keyword_args[key] = dict[key]
 
-        cls = getattr(gg, self.gear_selector_right.currentText())
+        cls = getattr(pgw, self.gear_selector_right.currentText())
         self.gear2 = cls(*positional_args, **keyword_args)
         if self.geargen_finished[0]:
             self.gear2.mesh_to(self.gear1)
@@ -314,7 +314,7 @@ class MainWindow(QMainWindow):
             self.animatebutton.setEnabled(True)
 
     def change_gear_type_left(self, s):
-        cls = getattr(gg, s)
+        cls = getattr(pgw, s)
         sig = inspect.signature(cls)
         index = self.left_layout.indexOf(self.numpanel_left)
         self.left_layout.removeWidget(self.numpanel_left)
@@ -323,7 +323,7 @@ class MainWindow(QMainWindow):
         self.left_layout.insertWidget(index, self.numpanel_left)
 
     def change_gear_type_right(self, s):
-        cls = getattr(gg, s)
+        cls = getattr(pgw, s)
         sig = inspect.signature(cls)
         index = self.right_layout.indexOf(self.numpanel_right)
         self.right_layout.removeWidget(self.numpanel_right)

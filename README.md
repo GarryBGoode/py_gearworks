@@ -27,9 +27,9 @@ Docs hosted on [readthedocs](https://gggears.readthedocs.io/en/latest/)
 | Gear Types        | Profile Mods      | Position & Alignment                  |
 | -------------     | -------------     | -------------                         |
 | Spur              | Undercut          | Std. position                         |
-| Helical           | Profile shift     | Backlash-free position*                |
+| Helical           | Profile shift     | Backlash-controlled position*         |
 | Bevel             | Root/tip fillet   | Axis alignment (bevels and helicals)  |
-| Cycloid           | Crowning          | Gear-angle mesh alignment             |
+| Cycloid           | Crowning          | Geartooth alignment to mesh           |
 | Inside-ring          
 
 Care was taken so that all (sensible) combination of supported features can be combined.
