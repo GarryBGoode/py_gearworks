@@ -20,7 +20,7 @@ It is highly recommended, though not strictly necessary to use a python-CAD gui 
 See [OCP VSCode](https://github.com/bernhard-42/vscode-ocp-cad-viewer) and [CadQuery Editor](https://github.com/CadQuery/CQ-editor).
 
 # Documentation
-Docs hosted on [readthedocs](https://py_gearworks.readthedocs.io/en/latest/)
+Docs hosted on [readthedocs](https://gggears.readthedocs.io/en/latest/)
 
 # Features
 
