@@ -6,7 +6,7 @@ Py-gearworks is built on build123d CAD package. It focuses on accurate geometric
 # Installation
 Currently the recommended way for most users to install py_gearworks is to install from github directly (git is required on the user's system for this):
 ```
-python -m pip install git+https://github.com/GarryBGoode/gggears
+python -m pip install git+https://github.com/GarryBGoode/py_gearworks
 ```
 Alternatively, one can clone or download this repository and install via this command from the repository root directory:
 ```
@@ -20,7 +20,7 @@ It is highly recommended, though not strictly necessary to use a python-CAD gui 
 See [OCP VSCode](https://github.com/bernhard-42/vscode-ocp-cad-viewer) and [CadQuery Editor](https://github.com/CadQuery/CQ-editor).
 
 # Documentation
-Docs hosted on [readthedocs](https://gggears.readthedocs.io/en/latest/)
+Docs hosted on [readthedocs](https://py_gearworks.readthedocs.io/en/latest/)
 
 # Features
 

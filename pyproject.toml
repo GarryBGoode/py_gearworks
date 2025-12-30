@@ -22,7 +22,7 @@ dependencies = [
 
 
 [project_urls]
-Homepage = "https://github.com/GarryBGoode/gggears"
+Homepage = "https://github.com/GarryBGoode/py_gearworks"
 
 [project.optional-dependencies]
 dev = [

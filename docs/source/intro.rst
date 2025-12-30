@@ -1,6 +1,6 @@
 Introduction
 ============
-`py_gearworks <https://github.com/GarryBGoode/gggears>`_ is a python module for accurate and feature-rich gear geometry generation.
+`py_gearworks <https://github.com/GarryBGoode/py_gearworks>`_ is a python module for accurate and feature-rich gear geometry generation.
 It is designed to be used with build123d python package, but can be used with any CAD workflow via STEP export.
 
 
@@ -17,11 +17,11 @@ Installation
 ============
 This project is not yet registered on pypi. You can install it from git via pip:
 
-```pip install git+https://github.com/GarryBGoode/gggears.git@main```
+```pip install git+https://github.com/GarryBGoode/py_gearworks.git@main```
 
 To include the project in a virtual environment (.venv), you can add this line to requirements.txt:
 
-```gggears @ git+https://github.com/GarryBGoode/gggears.git@main```
+```py_gearworks @ git+https://github.com/GarryBGoode/py_gearworks.git@main```
 
 Or download repository and install locally. Navigate to the repository folder and:
 
