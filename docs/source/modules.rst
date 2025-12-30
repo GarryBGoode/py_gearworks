@@ -1,7 +1,7 @@
-gggears
+py_gearworks
 =======
 
 .. toctree::
    :maxdepth: 4
 
-   gggears
+   py_gearworks

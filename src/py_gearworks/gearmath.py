@@ -1,6 +1,6 @@
 import numpy as np
-from gggears.gggears_base_classes import *
-from gggears.function_generators import *
+from py_gearworks.base_classes import *
+from py_gearworks.function_generators import *
 from scipy.optimize import root
 from scipy.spatial.transform import Rotation as scp_Rotation
 

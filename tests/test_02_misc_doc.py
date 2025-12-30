@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gggears.gggears_wrapper as gg
+import py_gearworks.wrapper as pgw
 import matplotlib.pyplot as plt
 import doctest
 import sys
@@ -41,10 +41,10 @@ def test_example():
 
 def test_doctest():
     """
-    Run doctests on the gggears module.
+    Run doctests on the py_gearworks module.
     """
     # Run doctests and check for failures
-    doctest_results = doctest.testmod(m=gg)
+    doctest_results = doctest.testmod(m=pgw)
     assert doctest_results.failed == 0
 
 

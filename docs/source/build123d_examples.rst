@@ -4,7 +4,7 @@ Build123d Workflow Examples
 Simple gears on a backplate
 ----------------------------
 
-Various properties and methods are made available in the class :py:class:`GearInfoMixin <gggears.gggears_wrapper.GearInfoMixin>`. 
+Various properties and methods are made available in the class :py:class:`GearInfoMixin <py_gearworks.wrapper.GearInfoMixin>`. 
 The following example demonstrates the creation of a gear-pair and attaching them to a base-plate: 
 
 .. image:: ./assets/gears_on_plate.png
@@ -14,23 +14,23 @@ The following example demonstrates the creation of a gear-pair and attaching the
 Highlights:
 
 * You can use \
-  :py:attr:`center_location_bottom <gggears.gggears_wrapper.GearInfoMixin.center_location_bottom>`, \
-  :py:attr:`center_location_top <gggears.gggears_wrapper.GearInfoMixin.center_location_top>`, \
-  :py:attr:`face_location_bottom <gggears.gggears_wrapper.GearInfoMixin.face_location_bottom>`, \
-  :py:attr:`face_location_bottom <gggears.gggears_wrapper.GearInfoMixin.face_location_bottom>` to align parts with gear centers.
+  :py:attr:`center_location_bottom <py_gearworks.wrapper.GearInfoMixin.center_location_bottom>`, \
+  :py:attr:`center_location_top <py_gearworks.wrapper.GearInfoMixin.center_location_top>`, \
+  :py:attr:`face_location_bottom <py_gearworks.wrapper.GearInfoMixin.face_location_bottom>`, \
+  :py:attr:`face_location_bottom <py_gearworks.wrapper.GearInfoMixin.face_location_bottom>` to align parts with gear centers.
 * Note that **center** refers to the pitch circle center and **face** refers to the face (surface) of the gear. These are different for bevel gears.
-* :py:attr:`gear.center <gggears.gggears_wrapper.GearInfoMixin.center>` is a numpy array, often needs to be converted to a `Vector` for build123d via :py:func:`np2v() <gggears.gggears_build123d.np2v>`.
-* Ideal center distance can be retrieved after calling the :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteGear.mesh_to>` method, and calculating the difference of :py:attr:`gear.center <gggears.gggears_wrapper.GearInfoMixin.center>` values.
+* :py:attr:`gear.center <py_gearworks.wrapper.GearInfoMixin.center>` is a numpy array, often needs to be converted to a `Vector` for build123d via :py:func:`np2v() <py_gearworks.conv_build123d.np2v>`.
+* Ideal center distance can be retrieved after calling the :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` method, and calculating the difference of :py:attr:`gear.center <py_gearworks.wrapper.GearInfoMixin.center>` values.
 
 .. note::
 
-    You are free to adjust the axial distance between gears by updating the :py:attr:`gear.center <gggears.gggears_wrapper.GearInfoMixin.center>` 
-    parameter. Small adjustment is best done after :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteGear.mesh_to>` has been called. Positioning helpers and properties
+    You are free to adjust the axial distance between gears by updating the :py:attr:`gear.center <py_gearworks.wrapper.GearInfoMixin.center>` 
+    parameter. Small adjustment is best done after :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` has been called. Positioning helpers and properties
     will be updated. However, calculations related to backlash and interference are not yet available.
 
 ::
 
-    import gggears as gg
+    import py_gearworks as pgw
     from build123d import *
     from ocp_vscode import *
 
@@ -45,18 +45,18 @@ Highlights:
     sleeve_height = 7
     sleeve_thickness = 1
 
-    gear1 = gg.HelicalGear(
-        number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=gg.PI / 12
+    gear1 = pgw.HelicalGear(
+        number_of_teeth=13, module=gearmodule, height=gearheight, helix_angle=pgw.PI / 12
     )
-    gear2 = gg.HelicalGear(
-        number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-gg.PI / 12
+    gear2 = pgw.HelicalGear(
+        number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-pgw.PI / 12
     )
-    gear1.mesh_to(gear2, target_dir=gg.DOWN)
+    gear1.mesh_to(gear2, target_dir=pgw.DOWN)
 
-    # gggears uses numpy arrays for vectors, build123d uses its own Vector class
+    # py_gearworks uses numpy arrays for vectors, build123d uses its own Vector class
     # np2v() is shorthand for nppoint2Vector(), which makes the conversion
-    gear1_center_vector = gg.np2v(gear1.center)
-    gear2_center_vector = gg.np2v(gear2.center)
+    gear1_center_vector = pgw.np2v(gear1.center)
+    gear2_center_vector = pgw.np2v(gear2.center)
     axial_distance_vector = gear1_center_vector - gear2_center_vector
 
     with BuildPart() as gear1_part:
@@ -147,9 +147,9 @@ but showcases the gear generator and its helper functions for build-123d workflo
 Highlights:
 
 * You can use `center_location_bottom` and `center_location_top` to align parts with gear centers.
-* The :py:attr:`radii_data_top <gggears.gggears_wrapper.GearInfoMixin.radii_data_top>` method generates reference curves for the gear.
-* The :py:class:`LineOfAction <gggears.gggears_wrapper.GearInfoMixin.LineOfAction>` class is available for generating the line of action between gears.
-* Sometimes converter functions are needed such as :py:func:`arc_to_b123d() <gggears.gggears_build123d.arc_to_b123d>` and :py:func:`line_to_b123d() <gggears.gggears_build123d.line_to_b123d>`. These convert between gggears' own geometry classes and build123d geometry.
+* The :py:attr:`radii_data_top <py_gearworks.wrapper.GearInfoMixin.radii_data_top>` method generates reference curves for the gear.
+* The :py:class:`LineOfAction <py_gearworks.wrapper.GearInfoMixin.LineOfAction>` class is available for generating the line of action between gears.
+* Sometimes converter functions are needed such as :py:func:`arc_to_b123d() <py_gearworks.conv_build123d.arc_to_b123d>` and :py:func:`line_to_b123d() <py_gearworks.conv_build123d.line_to_b123d>`. These convert between py_gearworks' own geometry classes and build123d geometry.
 
 
 .. image:: ./assets/gearpump_1.png
@@ -158,7 +158,7 @@ Highlights:
 
 ::
 
-    import gggears as gg
+    import py_gearworks as pgw
     from build123d import *
     from ocp_vscode import *
 
@@ -170,14 +170,14 @@ Highlights:
     gearmodule = 2
     wall_thickness = 3
 
-    gear1 = gg.SpurGear(
+    gear1 = pgw.SpurGear(
         number_of_teeth=17,
         module=gearmodule,
         height=gearheight,
         addendum_coefficient=1.0,
         z_anchor=0.5,
     )
-    gear2 = gg.SpurRingGear(
+    gear2 = pgw.SpurRingGear(
         number_of_teeth=23,
         module=gearmodule,
         height=gearheight,
@@ -189,7 +189,7 @@ Highlights:
         angle=0.135,
     )
     gear1.mesh_to(gear2)
-    gear1.center += gg.LEFT * 0.1
+    gear1.center += pgw.LEFT * 0.1
 
     with BuildPart() as gearpart1:
         gear1.build_part()
@@ -255,17 +255,17 @@ Highlights:
 
 
     # indicator sketches
-    addendum_circle_1 = gg.arc_to_b123d(gear1.radii_data_top.r_a_curve)
-    addendum_circle_2 = gg.arc_to_b123d(gear2.radii_data_top.r_a_curve)
+    addendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_a_curve)
+    addendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_a_curve)
 
     # involute base circle is not in the radii data
     # because radii data was meant to be generic and apply to other gears
-    base_circle_1 = gg.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
-    base_circle_2 = gg.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
+    base_circle_1 = pgw.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
+    base_circle_2 = pgw.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
 
-    loa1, loa2 = gg.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
-    line_of_action_1 = gg.line_to_b123d(loa1)
-    line_of_action_2 = gg.line_to_b123d(loa2)
+    loa1, loa2 = pgw.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
+    line_of_action_1 = pgw.line_to_b123d(loa1)
+    line_of_action_2 = pgw.line_to_b123d(loa2)
 
     # coloring
     line_of_action_1.color = (1, 0.2, 0.2)

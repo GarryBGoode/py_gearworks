@@ -11,8 +11,8 @@
 
 """Module for representing curves in 3D space."""
 
-from gggears.defs import *
-from gggears.function_generators import *
+from py_gearworks.defs import *
+from py_gearworks.function_generators import *
 from scipy.optimize import root, minimize
 import copy
 from enum import Enum

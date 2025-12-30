@@ -9,11 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gggears.function_generators import *
-from gggears.defs import *
-from gggears.gggears_base_classes import *
-from gggears.gearmath import *
-import gggears.curve as crv
+from py_gearworks.function_generators import *
+from py_gearworks.defs import *
+from py_gearworks.base_classes import *
+from py_gearworks.gearmath import *
+import py_gearworks.curve as crv
 
 from scipy.optimize import root
 from scipy.optimize import minimize

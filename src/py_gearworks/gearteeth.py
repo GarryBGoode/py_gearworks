@@ -1,7 +1,7 @@
-from gggears.gggears_base_classes import *
-from gggears.function_generators import *
-from gggears import curve as crv
-from gggears.defs import *
+from py_gearworks.base_classes import *
+from py_gearworks.function_generators import *
+from py_gearworks import curve as crv
+from py_gearworks.defs import *
 from scipy.optimize import root, minimize
 from scipy.spatial.transform import Rotation as scp_Rotation
 
@@ -139,9 +139,7 @@ class InvoluteUndercutTooth(InvoluteTooth):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.CurveChain:
@@ -214,10 +212,7 @@ class OctoidTooth(GearToothConicGenerator):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        else:
-            self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.Curve:
@@ -279,9 +274,7 @@ class OctoidUndercutTooth(GearToothConicGenerator):
         self.pitch_radius = pitch_radius
         self.cone_angle = cone_angle
         self.pressure_angle = pressure_angle
-        if ref_limits is None:
-            self.ref_limits = ToothLimitParam(h_a=1, h_d=1.2)
-        self.ref_limits = ref_limits
+        self.ref_limits = ref_limits if ref_limits is not None else ToothLimitParam()
         self.pitch_angle = pitch_angle
 
     def generate_tooth_curve(self) -> crv.Curve:

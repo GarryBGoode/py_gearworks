@@ -1,4 +1,4 @@
-import gggears as gg
+import py_gearworks as pgw
 from build123d import *
 from ocp_vscode import *
 import numpy as np
@@ -12,7 +12,7 @@ gearmodule = 2
 wall_thickness = 3
 clearence = 0.1
 
-gear1 = gg.SpurGear(
+gear1 = pgw.SpurGear(
     number_of_teeth=17,
     module=gearmodule,
     height=gearheight,
@@ -20,7 +20,7 @@ gear1 = gg.SpurGear(
     profile_shift=0.2,
     z_anchor=0.5,
 )
-gear2 = gg.SpurRingGear(
+gear2 = pgw.SpurRingGear(
     number_of_teeth=23,
     module=gearmodule,
     height=gearheight,
@@ -52,13 +52,14 @@ with BuildPart() as gearpart1:
         Hole(radius=axis_diameter / 2)
 
 
-gear1.mesh_to(gear2)
+gear1.mesh_to(gear2, backlash=clearence, angle_bias=1.0)
 # adjustment for backlash / fitting
-delta1 = gg.calc_involute_mesh_distance(
-    gear1, gear2, clearence * 0
-) - gg.calc_nominal_mesh_distance(gear1, gear2)
-# gear1.center += gg.LEFT * delta1
-gear1.angle += delta1 / gear1.r_base * 0
+# delta1 = pgw.calc_involute_mesh_distance(
+#     gear1, gear2, clearence * 0
+# ) - pgw.calc_nominal_mesh_distance(gear1, gear2)
+# delta1 = 0.0
+# gear1.center += pgw.LEFT * delta1
+# gear1.angle += delta1 / gear1.r_base * 0
 
 gearpart1.part.label = "gear1"
 gearpart1.part.location = gear1.center_location_middle
@@ -112,17 +113,17 @@ crescent.part.color = (0.5, 0.5, 0.8)
 
 
 # indicator sketches
-addendum_circle_1 = gg.arc_to_b123d(gear1.radii_data_top.r_a_curve)
-addendum_circle_2 = gg.arc_to_b123d(gear2.radii_data_top.r_a_curve)
+addendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_a_curve)
+addendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_a_curve)
 
 # involute base circle is not in the radii data
 # because radii data was meant to be generic and apply to other gears
-base_circle_1 = gg.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
-base_circle_2 = gg.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
+base_circle_1 = pgw.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
+base_circle_2 = pgw.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
 
-loa1, loa2 = gg.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
-line_of_action_1 = gg.line_to_b123d(loa1)
-line_of_action_2 = gg.line_to_b123d(loa2)
+loa1, loa2 = pgw.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
+line_of_action_1 = pgw.line_to_b123d(loa1)
+line_of_action_2 = pgw.line_to_b123d(loa2)
 
 # coloring
 line_of_action_1.color = (1, 0.2, 0.2)
@@ -213,6 +214,8 @@ anim_collector = Compound(
             housing_bottom.part,
             crescent.part,
             housing_top.part,
+            line_of_action_1,
+            line_of_action_2,
         ]
     ),
     label="assembly",

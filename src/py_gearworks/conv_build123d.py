@@ -12,12 +12,12 @@ limitations under the License.
 
 """
 
-from gggears.gggears_core import *
-from gggears.function_generators import *
-from gggears.curve import *
+from py_gearworks.core import *
+from py_gearworks.function_generators import *
+from py_gearworks.curve import *
 import build123d as bd
-from gggears.gggears_convert import *
-from gggears.gggears_base_classes import *
+from py_gearworks.conv_spline import *
+from py_gearworks.base_classes import *
 from scipy.spatial.transform import Rotation as scp_Rotation
 import numpy as np
 import time
@@ -37,7 +37,7 @@ class GearBuilder(GearToNurbs):
 
     Parameters
     ----------
-    gear : gg.Gear
+    gear : pgw.Gear
         The gear object to build.
     n_points_hz : int, optional
         Number of points used for spline approximation for each segment of the 2D gear
@@ -58,7 +58,7 @@ class GearBuilder(GearToNurbs):
 
     def __init__(
         self,
-        gear: gg.Gear,
+        gear: pgw.Gear,
         n_points_hz: int = 4,
         n_points_vert: int = 4,
         oversampling_ratio: float = 3,
@@ -311,7 +311,7 @@ class GearBuilder_old(GearToNurbs):
 
     def __init__(
         self,
-        gear: gg.Gear,
+        gear: pgw.Gear,
         n_points_hz=4,
         n_points_vert=4,
         oversampling_ratio=2.5,
@@ -466,7 +466,7 @@ def apply_transform_part(part: bd.Part, transform: GearTransform):
     return part2
 
 
-def apply_animation(gear: gg.Gear, part: bd.Part, time: float = 1):
+def apply_animation(gear: pgw.Gear, part: bd.Part, time: float = 1):
     pass
 
 
@@ -547,7 +547,7 @@ def generate_boundary_edges(
 
 
 def arc_to_b123d(arc: crv.ArcCurve) -> bd.Edge:
-    """Converts a gggears ArcCurve to a build123d Edge object."""
+    """Converts a py_gearworks ArcCurve to a build123d Edge object."""
     if (arc.t_0, arc.t_1) != (0, 1):
         # arc can be extended, better make a new one
         arc2 = crv.ArcCurve.from_2_point_center(arc.p0, arc.p1, arc.center)
@@ -577,7 +577,7 @@ def arc_to_b123d(arc: crv.ArcCurve) -> bd.Edge:
 
 
 def line_to_b123d(line: crv.LineCurve) -> bd.Edge:
-    """Converts a gggears LineCurve to a build123d Edge object."""
+    """Converts a py_gearworks LineCurve to a build123d Edge object."""
     return bd.Edge.make_line(np2v(line.p0), np2v(line.p1))
 
 

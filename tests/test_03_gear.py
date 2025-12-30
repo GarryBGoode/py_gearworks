@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gggears.gggears_wrapper as gg
-import gggears.gearteeth as gt
-import gggears.curve as crv
+import py_gearworks.wrapper as pgw
+import py_gearworks.gearteeth as gt
+import py_gearworks.curve as crv
 import matplotlib.pyplot as plt
 import numpy as np
-from gggears.defs import *
+from py_gearworks.defs import *
 import pytest as pytest
 from scipy.spatial.transform import Rotation as scp_Rotation
 import shapely as shp
@@ -91,7 +91,7 @@ def test_gear_intersect(
     if not cycloid:
         if conic:
             profile_shift = 0  # profile shift not supported for bevel gears yet
-        gear1 = gg.InvoluteGear(
+        gear1 = pgw.InvoluteGear(
             number_of_teeth=num_teeth,
             module=m,
             cone_angle=gamma1 * 2,
@@ -104,7 +104,7 @@ def test_gear_intersect(
             enable_undercut=True,
         )
 
-        gear2 = gg.InvoluteGear(
+        gear2 = pgw.InvoluteGear(
             number_of_teeth=num_teeth_2,
             module=m,
             dedendum_coefficient=1 + f0 + 1e-3 + profile_shift / 10,
@@ -121,7 +121,7 @@ def test_gear_intersect(
             rc = 0.25
         else:
             rc = 0.5
-        gear1 = gg.CycloidGear(
+        gear1 = pgw.CycloidGear(
             number_of_teeth=num_teeth,
             module=m,
             cone_angle=gamma1 * 2,
@@ -132,7 +132,7 @@ def test_gear_intersect(
             inside_cycloid_coefficient=rc,
         )
 
-        gear2 = gg.CycloidGear(
+        gear2 = pgw.CycloidGear(
             number_of_teeth=num_teeth_2,
             module=m,
             dedendum_coefficient=1 + f0 + 1e-3,
@@ -150,7 +150,7 @@ def test_gear_intersect(
     gear_gen2 = gear2.gearcore.curve_gen_at_z(0)
     outer_curve = crv.TransformedCurve(
         gear1.gearcore.transform,
-        gg.generate_boundary(gear_gen1, gear1.gearcore.tooth_param),
+        pgw.generate_boundary(gear_gen1, gear1.gearcore.tooth_param),
     )
 
     t_const = 2.5
@@ -158,7 +158,7 @@ def test_gear_intersect(
     t1 = np.linspace(-t_const / num_teeth, t_const / num_teeth, n_poly)
     points = outer_curve(t1)
 
-    polar_tf = gg.GearPolarTransform(
+    polar_tf = pgw.GearPolarTransform(
         cone_angle=gamma1 * 2, base_radius=gear1.gearcore.rp
     )
     points1 = polar_tf(points)
@@ -172,7 +172,7 @@ def test_gear_intersect(
 
     outer_curve2 = crv.TransformedCurve(
         gear2.gearcore.transform,
-        gg.generate_boundary(gear_gen2, gear2.gearcore.tooth_param),
+        pgw.generate_boundary(gear_gen2, gear2.gearcore.tooth_param),
     )
     t2 = np.linspace(-t_const / num_teeth_2, t_const / num_teeth_2, n_poly)
     points2 = outer_curve2(t2)
@@ -256,7 +256,7 @@ def test_CAD(
         f0 = 0.05
 
     if not cycloid:
-        gear1 = gg.InvoluteGear(
+        gear1 = pgw.InvoluteGear(
             number_of_teeth=num_teeth,
             module=module,
             cone_angle=gamma * 2,
@@ -275,7 +275,7 @@ def test_CAD(
         else:
             rc = 0.5
 
-        gear1 = gg.CycloidGear(
+        gear1 = pgw.CycloidGear(
             number_of_teeth=num_teeth,
             module=module,
             cone_angle=gamma * 2,

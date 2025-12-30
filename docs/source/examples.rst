@@ -2,13 +2,13 @@
 Examples
 ########
 
-The examples on this page showcase the available functionality of gggears package and help learning the workflow.
+The examples on this page showcase the available functionality of py_gearworks package and help learning the workflow.
 
 .. note::
 
     Some important lines are omitted below to save space, so you will most likely need to add 1 & 2 to the provided code below for them to work:
 
-        1. ``from gggears import *``
+        1. ``from py_gearworks import *``
         2. To view the created objects, you can use the following commands:
 
             - in *ocp_vscode* simply use e.g. ``show(gear_part_1,gear_part_2)`` or ``show_all()`` can be used to automatically show all objects with their variable names as labels.
@@ -56,11 +56,11 @@ Example with a ring-gear for planetary drive construction.
 3. Profile shifts
 --------------------
 
-Create profile shifted gears. Use the :py:class:`tip_truncation <gggears.gggears_wrapper.InvoluteGear>` parameter to avoid sharp tips.
+Create profile shifted gears. Use the :py:class:`tip_truncation <py_gearworks.wrapper.InvoluteGear>` parameter to avoid sharp tips.
 
 .. note::
 
-    The :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteGear.mesh_to>` function calculates accurate zero-backlash meshing of gears with ``profile_shift`` parameter.
+    The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function calculates accurate zero-backlash meshing of gears with ``profile_shift`` parameter.
     This is slightly shorter distance than the nominal center distance, and may lead to interference at the root.
 
 .. image:: assets/general_ex3.svg
@@ -76,8 +76,8 @@ Create profile shifted gears. Use the :py:class:`tip_truncation <gggears.gggears
 
 Create Helical Gears. Positive helix angle is right-handed, negative is left-handed.
 Use positive and negative values to create a common helical pair. The gears are calculated with the 'normal' (tool-parameter) system,
-as opposed to the 'transverse' system. The :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteGear.mesh_to>` function can account for different helix angles. Use the value ``PI/4`` for 90° crossed helicals.
-The class :py:class:`HelicalRingGear <gggears.gggears_wrapper.HelicalRingGear>` is also available for planetary drives with helical gears.
+as opposed to the 'transverse' system. The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function can account for different helix angles. Use the value ``PI/4`` for 90° crossed helicals.
+The class :py:class:`HelicalRingGear <py_gearworks.wrapper.HelicalRingGear>` is also available for planetary drives with helical gears.
 
 .. image:: assets/general_ex4.svg
     :align: center
@@ -105,7 +105,7 @@ The value of 1 corresponds to 0.001 module arc length reduction of tooth flank o
 ---------------------
 
 Create simple bevel gears at 90° angle.
-The function :py:meth:`cone_angle_from_teeth() <gggears.gearmath.cone_angle_from_teeth>` can be used to calculate appropriate cone angles for given number of teeth and given angle between axes.
+The function :py:meth:`cone_angle_from_teeth() <py_gearworks.gearmath.cone_angle_from_teeth>` can be used to calculate appropriate cone angles for given number of teeth and given angle between axes.
 
 .. image:: assets/general_ex6.svg
     :align: center
@@ -137,7 +137,7 @@ Axis offset (hypoid) geometry is not yet supported.
 Create gears wit cycloid geometry. Cycloids have no pressure angle as a parameter, but are rather defined by the radii of the generator rolling circles.
 These generator circles are controlled by the ``inside_cycloid_coefficient`` and ``outside_cycloid_coefficient`` parameters.
 The rolling circles need to match for meshing gears.
-The :py:meth:`adapt_cycloid_radii <gggears.gggears_wrapper.CycloidGear.adapt_cycloid_radii>` function can be used to adjust the outside rolling circles of gears for appropriate meshing.
+The :py:meth:`adapt_cycloid_radii <py_gearworks.wrapper.CycloidGear.adapt_cycloid_radii>` function can be used to adjust the outside rolling circles of gears for appropriate meshing.
 
 .. image:: assets/general_ex8.svg
     :align: center
@@ -150,9 +150,9 @@ The :py:meth:`adapt_cycloid_radii <gggears.gggears_wrapper.CycloidGear.adapt_cyc
 9. Racks
 ---------------------
 
-Create straight racks with the :py:class:`InvoluteRack <gggears.gggears_wrapper.InvoluteRack>` class.
+Create straight racks with the :py:class:`InvoluteRack <py_gearworks.wrapper.InvoluteRack>` class.
 Racks are developed separately from the gear class structures, so not all features of gears are available for racks.
-Racks can use :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteRack.mesh_to>` function for positioning next to gears, but gears can't mesh_to() racks (missing feature for  now).
+Racks can use :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteRack.mesh_to>` function for positioning next to gears, but gears can't mesh_to() racks (missing feature for  now).
 
 .. image:: assets/general_ex9.svg
     :align: center
@@ -165,9 +165,9 @@ Racks can use :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteRack.mesh_to>
 10. Helical Racks
 ---------------------
 
-The :py:class:`HelicalRack <gggears.gggears_wrapper.HelicalRack>` class can be used to create racks matching to :py:class:`HelicalGear <gggears.gggears_wrapper.HelicalGear>`  class.
-While :py:class:`InvoluteRack <gggears.gggears_wrapper.InvoluteRack>` class also has beta angle input which corresponds to helical angle,
-the HelicalRack class also accounts for normal-transverse system conversions to directly match the :py:class:`HelicalGear <gggears.gggears_wrapper.HelicalGear>` class.
+The :py:class:`HelicalRack <py_gearworks.wrapper.HelicalRack>` class can be used to create racks matching to :py:class:`HelicalGear <py_gearworks.wrapper.HelicalGear>`  class.
+While :py:class:`InvoluteRack <py_gearworks.wrapper.InvoluteRack>` class also has beta angle input which corresponds to helical angle,
+the HelicalRack class also accounts for normal-transverse system conversions to directly match the :py:class:`HelicalGear <py_gearworks.wrapper.HelicalGear>` class.
 
 .. image:: assets/general_ex10.svg
     :align: center
@@ -178,7 +178,7 @@ the HelicalRack class also accounts for normal-transverse system conversions to 
 
 11. Controlling backlash
 ---------------------
-The :py:meth:`mesh_to() <gggears.gggears_wrapper.InvoluteGear.mesh_to>` function has a ``backlash`` parameter to control the distance between meshing gears.
+The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function has a ``backlash`` parameter to control the distance between meshing gears.
 The backlash value is given in mm, it is measured as the distance along the line of action, between the inactive flanks of gearteeth.
 
 .. image:: assets/general_ex11.svg

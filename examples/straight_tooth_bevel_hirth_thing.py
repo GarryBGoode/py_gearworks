@@ -1,4 +1,4 @@
-from gggears import *
+from py_gearworks import *
 from ocp_vscode import show
 
 # thi code is meant to approximate a Hirth joint with a straight tooth 180deg bevel gear
