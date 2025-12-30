@@ -25,7 +25,7 @@ gear2 = pgw.SpurRingGear(
     module=gearmodule,
     height=gearheight,
     addendum_coefficient=1.4,
-    dedendum_coefficient=0.6,
+    dedendum_coefficient=0.8,
     outside_ring_coefficient=2.2,
     profile_shift=0.2,
     z_anchor=0.5,
@@ -51,15 +51,9 @@ with BuildPart() as gearpart1:
         # axle hole
         Hole(radius=axis_diameter / 2)
 
-
-gear1.mesh_to(gear2, backlash=clearence, angle_bias=1.0)
-# adjustment for backlash / fitting
-# delta1 = pgw.calc_involute_mesh_distance(
-#     gear1, gear2, clearence * 0
-# ) - pgw.calc_nominal_mesh_distance(gear1, gear2)
-# delta1 = 0.0
-# gear1.center += pgw.LEFT * delta1
-# gear1.angle += delta1 / gear1.r_base * 0
+# backlash is specified as a coefficient of module
+# clearence is in absolute units, so convert to coefficient of module
+gear1.mesh_to(gear2, backlash=clearence / gearmodule, angle_bias=1.0)
 
 gearpart1.part.label = "gear1"
 gearpart1.part.location = gear1.center_location_middle
@@ -79,12 +73,17 @@ with BuildPart() as housing_base:
     r_outer_gear2 = gear2.max_outside_radius + clearence
     r_outer_wall = r_outer_gear2 + wall_thickness
     # External housing with even-ish wall thickness
-    Cylinder(radius=r_outer_wall, height=gearheight + wall_thickness * 2, mode=Mode.ADD)
+    Cylinder(
+        radius=r_outer_wall,
+        height=gearheight + wall_thickness * 2,
+        mode=Mode.ADD,
+    )
     Cylinder(radius=r_outer_gear2, height=gearheight, mode=Mode.SUBTRACT)
 
-
+# split housing base to top and bottom parts
 with BuildPart() as housing_bottom:
     add(housing_base.part.split(tool=Plane.XY, keep=Keep.BOTTOM))
+    # axle hole
     with Locations((gear1.center_location_bottom)):
         Hole(radius=axis_diameter / 2)
 housing_bottom.part.label = "housing_bottom"
@@ -115,6 +114,10 @@ crescent.part.color = (0.5, 0.5, 0.8)
 # indicator sketches
 addendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_a_curve)
 addendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_a_curve)
+
+# dedendum sketches
+dedendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_d_curve)
+dedendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_d_curve)
 
 # involute base circle is not in the radii data
 # because radii data was meant to be generic and apply to other gears
@@ -216,6 +219,8 @@ anim_collector = Compound(
             housing_top.part,
             line_of_action_1,
             line_of_action_2,
+            addendum_circle_1,
+            dedendum_circle_2,
         ]
     ),
     label="assembly",

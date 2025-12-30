@@ -76,21 +76,22 @@ gear2 = SpurGear(
     height=4,
 )
 
-# move and align gear 1 next to gear 2 in the Y (UP) direction
+# move and align gear 1 next to gear 2 in the Y direction
 # backlash can be optionally specified
 # angle_bias conrtols location within backlash range (-1 to 1)
-gear1.mesh_to(gear2, target_dir=UP, backlash=0.2, angle_bias=1)
+# backlash is a coefficient of module
+# there will be 0.2 mm distance between inactive tooth sides in this example
+gear1.mesh_to(gear2, target_dir=UP, backlash=0.1, angle_bias=1)
 
 # generate build123d Part objects
 gear_part_1 = gear1.build_part()
 gear_part_2 = gear2.build_part()
 
-# center-bores, keyways, axles and the like are recommended 
-# to be added separately via build123d workflow
-# see build123d algebra mode
+# center-bores are recommended to be added separately via build123d workflow
+# center_location_top is a build123d location object
+# multiplying with a location means placement at that location
 hole_obj_1 = gear1.center_location_top * Hole(radius=2, depth=4)
 gear_part_1 = gear_part_1.cut(hole_obj_1)
-
 hole_obj_2 = gear2.center_location_top * Hole(radius=2, depth=4)
 gear_part_2 = gear_part_2.cut(hole_obj_2)
 

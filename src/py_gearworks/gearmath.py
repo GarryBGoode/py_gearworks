@@ -86,13 +86,6 @@ def calc_involute_mesh_distance(
         )
         Dist = (r_base_2 - r_base_1) / np.cos(sol.x[0])
     else:
-
-        # d1 = r_base_1 * (-angle_base_1)
-        # d2 = r_base_2 * (pitch_angle_2 / 2 + angle_base_2)
-        # sol = root(
-        #     lambda a: np.tan(a) - a + (d2 - d1 - backlash / 2) / (r_base_1 + r_base_2),
-        #     0.1,
-        # )
         d1 = r_base_1 * ((angle_base_1))
         d2 = r_base_2 * (pitch_angle_2 / 2 - (angle_base_2))
         sol = root(
@@ -144,7 +137,7 @@ def backlash_from_ax_distance(
         d2 = r_base_2 * (-angle_base_2)
         a = np.arccos((r_base_2 - r_base_1) / Distance)
         #  np.tan(a) - a + (d2 - d1 - backlash) / (r_base_2 - r_base_1) = 0
-        backlash = d2 - d1 - (-np.tan(a) + a) * (r_base_2 - r_base_1)
+        backlash = d2 - d1 - (-np.tan(a) + a) * (r_base_2 - r_base_1) * 2
     else:
         d1 = r_base_1 * (-angle_base_1)
         d2 = r_base_2 * (pitch_angle_2 / 2 + angle_base_2)
@@ -152,7 +145,7 @@ def backlash_from_ax_distance(
         #  np.tan(a) - a + (d2 - d1 - backlash) / (r_base_1 + r_base_2) = 0
         # (d2 - d1 - backlash) / (r_base_1 + r_base_2) = -np.tan(a) + a
         # (d2 - d1 - backlash) = ( -np.tan(a) + a) * (r_base_1 + r_base_2)
-        backlash = d2 - d1 - (-np.tan(a) + a) * (r_base_1 + r_base_2)
+        backlash = d2 - d1 - (-np.tan(a) + a) * (r_base_1 + r_base_2) * 2
     return backlash
 
 

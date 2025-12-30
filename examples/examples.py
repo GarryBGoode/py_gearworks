@@ -41,7 +41,9 @@ def spur_gears():
     # move and align gear 1 next to gear 2 in the Y direction
     # backlash can be optionally specified
     # angle_bias conrtols location within backlash range (-1 to 1)
-    gear1.mesh_to(gear2, target_dir=UP, backlash=0.2, angle_bias=1)
+    # backlash is a coefficient of module
+    # there will be 0.2 mm distance between inactive tooth sides in this example
+    gear1.mesh_to(gear2, target_dir=UP, backlash=0.1, angle_bias=1)
 
     # generate build123d Part objects
     gear_part_1 = gear1.build_part()
@@ -88,38 +90,52 @@ def gear_and_rack():
 
 
 def spur_gear_backlash():
-    m = 2
-    gear1 = SpurGear(number_of_teeth=28, module=m, profile_shift=0.1)
-    gear2 = SpurGear(number_of_teeth=57, module=m)
-    gear3 = SpurGear(number_of_teeth=8, module=m, profile_shift=0.7)
-    gear4 = SpurRingGear(number_of_teeth=95, profile_shift=-0.2, module=m)
-    gear5 = SpurGear(12, module=m, profile_shift=0.4)
-    gear6 = SpurGear(7, module=m, profile_shift=0.6)
+    module = 4
+    backlash = 0.1
 
-    # backlash is the linear gap between the inactive flanks of teeth
-    # backlash is measured in regular distance, not per-module
-    # angle_bias shifts the gear to one side of the backlash gap
-    gear1.mesh_to(gear2, target_dir=RIGHT, backlash=0.1, angle_bias=1)
-    gear4.mesh_to(gear1, target_dir=RIGHT, backlash=0.2, angle_bias=0)
+    # backlash assigned to tooth width
+    # half of it to gear_1, half to gear_2
+    gear_1 = SpurGear(
+        number_of_teeth=7,
+        module=module,
+        profile_shift=0.7,
+        height=5,
+        backlash=backlash / 2,
+    )
+    gear_2 = SpurGear(
+        number_of_teeth=25,
+        module=module,
+        profile_shift=0.3,
+        height=5,
+        backlash=backlash / 2,
+    )
+    # mesh gears together with backlash consideration
+    # when no backlash parameter is given here,
+    # the sum of the gear backlash values will be used
+    gear_2.mesh_to(gear_1, target_dir=RIGHT, angle_bias=1.0)
+    print(
+        f"Center distance with backlash: {np.linalg.norm(gear_2.center - gear_1.center)}"
+    )
 
-    # while the underlying math can handle profile shifts,
-    # there can be some interference with backlash=0 due to numerical errors
-    gear5.mesh_to(gear4, target_dir=DOWN + RIGHT, backlash=0.1, angle_bias=0)
-    gear3.mesh_to(gear2, target_dir=UP, backlash=0)
-    gear6.mesh_to(gear4, target_dir=DOWN + RIGHT * 0.056, backlash=0)
-    gear_part_1 = gear1.build_part()
-    gear_part_2 = gear2.build_part()
-    gear_part_3 = gear3.build_part()
-    gear_part_4 = gear4.build_part()
-    gear_part_5 = gear5.build_part()
-    gear_part_6 = gear6.build_part()
+    gear_part_1 = gear_1.build_part()
+    gear_part_2 = gear_2.build_part()
+
+    # move gear_1
+    gear_1.center = DOWN * gear_2.addendum_radius * 2
+    # update mesh, with zero backlash this time
+    gear_2.mesh_to(gear_1, target_dir=RIGHT, backlash=0.0, angle_bias=1.0)
+    print(
+        f"Center distance without backlash: {np.linalg.norm(gear_2.center - gear_1.center)}"
+    )
+
+    gear_part_21 = gear_1.build_part()
+    gear_part_22 = gear_2.build_part()
+
     return (
         gear_part_1,
         gear_part_2,
-        gear_part_3,
-        gear_part_4,
-        gear_part_5,
-        gear_part_6,
+        gear_part_21,
+        gear_part_22,
     )
 
 
@@ -462,4 +478,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gears(), deviation=0.05, angular_tolerance=0.1)
+    show(helical_gears(), deviation=0.05, angular_tolerance=0.1)

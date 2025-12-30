@@ -504,12 +504,20 @@ class InvoluteGear(GearInfoMixin):
                 * 1e-3
             )
 
+        backlash_angle_val = (
+            self.inputparam.backlash
+            / 2
+            / (rp_ref * np.cos(self.inputparam.pressure_angle))
+        )
+        if self.inputparam.inside_teeth:
+            backlash_angle_val = -backlash_angle_val
+
         tooth_angle = (
             pitch_angle / 4
             + self.inputparam.profile_shift
             * np.tan(self.inputparam.pressure_angle)
             / rp_ref
-            - self.inputparam.backlash / rp_ref
+            - backlash_angle_val
         )
 
         spiral_coeff = np.tan(self.beta) / rp_ref
@@ -642,7 +650,7 @@ class InvoluteGear(GearInfoMixin):
         self,
         other: "InvoluteGear",
         target_dir: np.ndarray = RIGHT,
-        backlash: float = 0.0,
+        backlash: float = None,
         angle_bias: float = 0.0,
     ):
         """Aligns this gear to another gear object.
@@ -654,14 +662,18 @@ class InvoluteGear(GearInfoMixin):
             Direction vector where this gear should be placed in relation to the other
             gear. Default is RIGHT (x-axis). Need not be unit vector, will be normalized.
         backlash: float, optional
-            Backlash value to consider during meshing. Default is 0.0.
+            Backlash coefficient value to consider during meshing. Default is 0.0.
             Backlash is defined as linear distance along the line of action between the
-            inactive tooth flanks.
+            inactive tooth flanks. Also can be considered circumferential backlash along
+            the base circle. Parameter coefficient of module.
         angle_bias: float, optional
             Angle bias to apply within the backlash. 1 shifts the gear in the positive
             direction until it makes contact. -1 shifts in the negative direction,
             0 places it in the middle. Default is 0.0.
         """
+        if backlash is None:
+            backlash = self.inputparam.backlash + other.inputparam.backlash
+        backlash_act = self.inputparam.module * backlash
         target_dir = target_dir / np.linalg.norm(target_dir)
         if self.cone_angle != 0 or other.cone_angle != 0:
             v0 = calc_bevel_gear_placement_vector(
@@ -709,7 +721,7 @@ class InvoluteGear(GearInfoMixin):
                     -other.angle_base,
                     other.pitch_angle,
                     inside_ring=self.inside_teeth or other.inside_teeth,
-                    backlash=backlash,
+                    backlash=backlash_act,
                 )
             v0 = target_dir * distance + other.gearcore.transform.center
             self.gearcore.transform.center = v0
@@ -723,7 +735,7 @@ class InvoluteGear(GearInfoMixin):
                     gear1_inside_ring=self.inside_teeth,
                     gear2_inside_ring=other.inside_teeth,
                 )
-                + angle_bias / 2 * backlash / self.r_base
+                + angle_bias / 2 * backlash_act / self.r_base
             )
 
     def reset_location(self):
@@ -1174,9 +1186,11 @@ class HelicalGear(InvoluteGear):
         """Beta = helix angle of the gear."""
         return self.helix_angle
 
-    def mesh_to(self, other, target_dir=RIGHT):
+    def mesh_to(
+        self, other, target_dir=RIGHT, backlash: float = None, angle_bias: float = 0.0
+    ):
         # basic meshing
-        super().mesh_to(other, target_dir)
+        super().mesh_to(other, target_dir, backlash, angle_bias)
         # orientation correction
         rot_axis = normalize_vector(other.gearcore.center - self.gearcore.center)
         angle_axis = self.beta + other.beta

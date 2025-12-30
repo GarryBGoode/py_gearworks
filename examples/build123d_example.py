@@ -18,7 +18,7 @@ gear1 = pgw.HelicalGear(
 gear2 = pgw.HelicalGear(
     number_of_teeth=31, module=gearmodule, height=gearheight, helix_angle=-pgw.PI / 12
 )
-gear1.mesh_to(gear2, target_dir=pgw.DOWN)
+gear1.mesh_to(gear2, target_dir=pgw.DOWN, backlash=0.1, angle_bias=1)
 
 # py_gearworks uses numpy arrays for vectors, build123d uses its own Vector class
 # np2v() is shorthand for nppoint2Vector(), which makes the conversion

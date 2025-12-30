@@ -41,7 +41,7 @@ This example demonstrates the creation of two spur gears with different number o
 .. _ex 2:
 
 2. Inside Ring Gears
---------------------
+-------------------------
 
 Example with a ring-gear for planetary drive construction.
 
@@ -54,14 +54,16 @@ Example with a ring-gear for planetary drive construction.
 
 
 3. Profile shifts
---------------------
+------------------------
 
 Create profile shifted gears. Use the :py:class:`tip_truncation <py_gearworks.wrapper.InvoluteGear>` parameter to avoid sharp tips.
+When unspecified, :py:class:`tip_truncation <py_gearworks.wrapper.InvoluteGear>` defaults to 0.2.
+This results in 0.2 module reduction of addendum radius compared to the sharp tips radius.
 
 .. note::
 
     The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function calculates accurate zero-backlash meshing of gears with ``profile_shift`` parameter.
-    This is slightly shorter distance than the nominal center distance, and may lead to interference at the root.
+    For profile shifted gears, this is slightly shorter distance than the nominal center distance, and may lead to interference at the root.
 
 .. image:: assets/general_ex3.svg
     :align: center
@@ -86,6 +88,21 @@ The class :py:class:`HelicalRingGear <py_gearworks.wrapper.HelicalRingGear>` is 
     :start-after: [Ex. 4]
     :end-before: [Ex. 4]
 
+4.5. Crossed Helical Gears
+----------------------------
+
+Create crossed helical gears with 90° angle between axes. Use positive helix angle on both gears for a common pair.
+The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function can account for different helix angles and axis angles.
+Extreme values of helix angle can approximate worm-gear like geometry, but actual worm-gears are not yet supported.
+A proper worm-wheel conforms to the worm-screw, resulting in a complex 3D shape which is not yet supported.
+
+.. image:: assets/general_ex45.svg
+    :align: center
+
+.. literalinclude:: examples.py
+    :start-after: [Ex. 45]
+    :end-before: [Ex. 45]
+
 5. Crowning
 --------------------
 
@@ -102,7 +119,7 @@ The value of 1 corresponds to 0.001 module arc length reduction of tooth flank o
     :end-before: [Ex. 5]
 
 6. Bevel Gears at 90°
----------------------
+------------------------
 
 Create simple bevel gears at 90° angle.
 The function :py:meth:`cone_angle_from_teeth() <py_gearworks.gearmath.cone_angle_from_teeth>` can be used to calculate appropriate cone angles for given number of teeth and given angle between axes.
@@ -119,7 +136,7 @@ The function :py:meth:`cone_angle_from_teeth() <py_gearworks.gearmath.cone_angle
     Top and bottom face of bevel gears follow spherical surface (not conic).
 
 7. Spiral Bevel Gears
----------------------
+-------------------------
 Spiral bevel gears are under development, but you can already create them with the following code.
 The spiral geometry follows an euclidean spiral, which is mathematically simple, but is not realistic.
 Axis offset (hypoid) geometry is not yet supported.
@@ -177,9 +194,23 @@ the HelicalRack class also accounts for normal-transverse system conversions to 
     :end-before: [Ex. 10]
 
 11. Controlling backlash
----------------------
+---------------------------
+Backlash in general is defined as a coefficient of module.
+It represents the distance between inactive surfaces of teeth of meshing gears, or, equivalently, circumferential play calculated at the base circle (warning: not pitch circle!).
+
 The :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function has a ``backlash`` parameter to control the distance between meshing gears.
-The backlash value is given in mm, it is measured as the distance along the line of action, between the inactive flanks of gearteeth.
+Backlash can also be defined for individual gears with the :py:attr:`backlash <py_gearworks.wrapper.InvoluteGear.backlash>` parameter.
+In this case backlash is realized by reducing the tooth thickness.
+
+When backlash parameter is not defined for the :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function, the sum of the backlash values of the two gears is used.
+When backlash is defined for the :py:meth:`mesh_to() <py_gearworks.wrapper.InvoluteGear.mesh_to>` function, the axial distance between the gears is calculated such that the prescribed backlash is achieved.
+
+.. note ::
+    Highly profile shifted gears with low or zero backlash may lead to interference at the root of the tooth.
+
+Backlash calculation for mesh_to() function is only available for spur gears and helical gears with parallel axis.
+For helicals, it is defined in the transverse plane.
+Bevel gears and crossed helical gear backlash can only be defined for tooth parameters, not for mesh_to() function.
 
 .. image:: assets/general_ex11.svg
     :align: center
