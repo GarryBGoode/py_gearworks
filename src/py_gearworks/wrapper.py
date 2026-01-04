@@ -15,6 +15,7 @@ from py_gearworks.conv_build123d import *
 from build123d import Part
 from py_gearworks.gearteeth import *
 from py_gearworks.gearmath import *
+from scipy.optimize import root, minimize
 
 
 class GearInfoMixin:
@@ -193,7 +194,8 @@ class GearInfoMixin:
         c0, c1 = self.gearcore.shape_recipe.transform.center(
             z0
         ), self.gearcore.shape_recipe.transform.center(z1)
-        return np.linalg.norm((self.gearcore.transform(c0 - c1)))
+        scaler = self.gearcore.transform.scale
+        return np.linalg.norm(scaler * (c0 - c1))
 
     def radii_data_gen(self, z) -> GearRefCircles:
         """Generates the reference circles of the gear at a given z-value."""
@@ -1956,10 +1958,14 @@ class CycloidGear(GearInfoMixin):
         return copy.deepcopy(self)
 
 
-class LineOfAction:
-    """Class for generating the line of action of two meshing gears.
+def generate_line_of_action(
+    gear1: InvoluteGear, gear2: InvoluteGear, z_level=1
+) -> tuple[crv.LineCurve, crv.LineCurve]:
+    """Generates the line of action of two meshing gears. Line of action starts
+    and ends at the base circle for standard external gears.
+    For inside gears, the line of action ends at the addendum circle of the ring.
 
-    Parameters
+    Arguments
     ----------
     gear1: InvoluteGear
         The first gear object.
@@ -1967,82 +1973,154 @@ class LineOfAction:
         The second gear object.
     z_ratio: float, optional
         Ratio of the height of the gears where the line of action should be calculated.
-        0 means at the bottom, 1 at the top. Default is 0.
+        0 means at the bottom, 1 at the top. Default is 1 (top).
+
+    Returns
+    -------
+    tuple[LineCurve, LineCurve]
+        Two LineCurve objects representing the line of action on each gear.
     """
+    diff_vector = gear2.center_point_at_z(z_level) - gear1.center_point_at_z(z_level)
+    distance = np.linalg.norm(diff_vector)
+    diff_vector_unit = diff_vector / distance
 
-    def __init__(self, gear1: InvoluteGear, gear2: InvoluteGear, z_ratio=0):
-        self.gear1: InvoluteGear = gear1
-        self.gear2: InvoluteGear = gear2
-        self.z_ratio = z_ratio
+    rb1 = gear1.circle_involute_base(z_level).radius
+    rb2 = gear2.circle_involute_base(z_level).radius
+    center1 = gear1.center_point_at_z(gear1.p2z(z_level))
+    center2 = gear2.center_point_at_z(gear2.p2z(z_level))
 
-    @property
-    def centerdiff(self):
-        return self.gear2.center_point_at_z(
-            self.gear2.p2z(self.z_ratio)
-        ) - self.gear1.center_point_at_z(self.gear1.p2z(self.z_ratio))
+    def mirror_diffline(p):
+        p1 = p - center1
+        p_norm = p1 - np.dot(p1, diff_vector_unit) * diff_vector_unit
+        return p - 2 * p_norm
 
-    def LOA_gen(self):
-        diff_vector = self.centerdiff
-        distance = np.linalg.norm(diff_vector)
-        diff_vector_unit = diff_vector / distance
+    if gear1.inside_teeth:
+        if np.abs(rb2 - rb1) / distance > 1:
+            raise ValueError("Unable to calculate line of action for this gear pair.")
+        alpha = np.arccos((rb2 - rb1) / distance)
+        len_loa = np.sqrt(gear2.addendum_radius**2 - rb2**2)
+        startpoint1 = center2 + rotate_vector(-diff_vector_unit, alpha) * rb2
+        endpoint1 = (
+            startpoint1 + rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
+        )
+        line1 = crv.LineCurve(p0=startpoint1, p1=endpoint1)
+        startpoint2 = mirror_diffline(startpoint1)
+        endpoint2 = mirror_diffline(endpoint1)
+        line2 = crv.LineCurve(p0=startpoint2, p1=endpoint2)
+        return line1, line2
+    elif gear2.inside_teeth:
+        if np.abs(rb2 - rb1) / distance > 1:
+            raise ValueError("Unable to calculate line of action for this gear pair.")
+        alpha = np.arccos((rb2 - rb1) / distance)
+        len_loa = np.sqrt(gear1.addendum_radius**2 - rb1**2)
+        startpoint1 = center1 + rotate_vector(-diff_vector_unit, alpha) * rb1
+        endpoint1 = (
+            startpoint1 - rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
+        )
+        line1 = crv.LineCurve(p0=startpoint1, p1=endpoint1)
+        startpoint2 = mirror_diffline(startpoint1)
+        endpoint2 = mirror_diffline(endpoint1)
+        line2 = crv.LineCurve(p0=startpoint2, p1=endpoint2)
+        return line1, line2
+    else:
+        if np.abs(rb2 + rb1) / distance > 1:
+            raise ValueError("Unable to calculate line of action for this gear pair.")
+        alpha = np.arccos((rb1 + rb2) / distance)
+        line1 = crv.LineCurve(
+            p0=center1 + rotate_vector(diff_vector_unit, alpha) * rb1,
+            p1=center2 + rotate_vector(-diff_vector_unit, alpha) * rb2,
+        )
+        line2 = crv.LineCurve(
+            p0=center1 + rotate_vector(diff_vector_unit, -alpha) * rb1,
+            p1=center2 + rotate_vector(-diff_vector_unit, -alpha) * rb2,
+        )
+        return line1, line2
 
-        rb1 = self.gear1.circle_involute_base(self.z_ratio).radius
-        rb2 = self.gear2.circle_involute_base(self.z_ratio).radius
-        center1 = self.gear1.center_point_at_z(self.gear1.p2z(self.z_ratio))
-        center2 = self.gear2.center_point_at_z(self.gear2.p2z(self.z_ratio))
 
-        def mirror_diffline(p):
-            p1 = p - center1
-            p_norm = p1 - np.dot(p1, diff_vector_unit) * diff_vector_unit
-            return p - 2 * p_norm
+def generate_line_of_contact(
+    gear1: InvoluteGear, gear2: InvoluteGear, z_level=1
+) -> tuple[crv.LineCurve, crv.LineCurve]:
+    """Generates the line of contact of two meshing gears. Line of contact is the
+    trimmed version of the line of action that represents where actual contact occurs on
+    the gear.
 
-        if self.gear1.inside_teeth:
-            if np.abs(rb2 - rb1) / distance > 1:
-                raise ValueError(
-                    "Unable to calculate line of action for this gear pair."
-                )
-            alpha = np.arccos((rb2 - rb1) / distance)
-            len_loa = np.sqrt(self.gear2.addendum_radius**2 - rb2**2)
-            startpoint1 = center2 + rotate_vector(-diff_vector_unit, alpha) * rb2
-            endpoint1 = (
-                startpoint1 + rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
+    Arguments
+    ----------
+    gear1: InvoluteGear
+        The first gear object.
+    gear2: InvoluteGear
+        The second gear object.
+    z_ratio: float, optional
+        Ratio of the height of the gears where the line of contact should be calculated.
+        0 means at the bottom, 1 at the top. Default is 1 (top).
+
+    Returns
+    -------
+    tuple[LineCurve, LineCurve]
+        Two LineCurve objects representing the line of contact on each gear.
+    """
+    loa1, loa2 = generate_line_of_action(gear1, gear2, z_level)
+    circles_1 = gear1.radii_data_gen(gear1.p2z(z_level))
+    circles_2 = gear2.radii_data_gen(gear2.p2z(z_level))
+    add_1 = circles_1.r_a_curve
+    ded_1 = circles_1.r_d_curve
+    add_2 = circles_2.r_a_curve
+    ded_2 = circles_2.r_d_curve
+
+    def get_minmax_point(gear):
+        tooth_gen = gear.gearcore.shape_recipe(gear.p2z(z_level)).tooth_generator
+        tooth_curve = tooth_gen.generate_tooth_curve()
+        invo_curves = [
+            curve
+            for curve in tooth_curve.get_curves()
+            if isinstance(curve, crv.InvoluteCurve)
+        ]
+        invo_min_point = invo_curves[-1](0)
+        invo_max_point = invo_curves[-1](1)
+        return invo_min_point, invo_max_point
+
+    module = gear1.module
+    min_point_1, max_point_1 = get_minmax_point(gear1)
+    min_point_2, max_point_2 = get_minmax_point(gear2)
+    min_point_1_rad = np.linalg.norm(min_point_1[:2]) * module
+    min_point_2_rad = np.linalg.norm(min_point_2[:2]) * module
+    max_point_1_rad = np.linalg.norm(max_point_1[:2]) * module
+    max_point_2_rad = np.linalg.norm(max_point_2[:2]) * module
+    if max_point_1_rad < add_1.radius:
+        add_1.radius = max_point_1_rad
+    if max_point_2_rad < add_2.radius:
+        add_2.radius = max_point_2_rad
+    if min_point_1_rad > ded_1.radius:
+        ded_1.radius = min_point_1_rad
+    if min_point_2_rad > ded_2.radius:
+        ded_2.radius = min_point_2_rad
+    sol_midpoint = find_curve_intersect(loa1, loa2)
+    midpoint_1 = sol_midpoint.x[0]
+
+    def circle_line_intersect(circle_curve, line_curve, guess):
+        sol = minimize(
+            lambda t: (
+                np.linalg.norm(line_curve(t[0]) - circle_curve.center)
+                - circle_curve.radius
             )
-            line1 = crv.LineCurve(p0=startpoint1, p1=endpoint1)
-            startpoint2 = mirror_diffline(startpoint1)
-            endpoint2 = mirror_diffline(endpoint1)
-            line2 = crv.LineCurve(p0=startpoint2, p1=endpoint2)
-            return line1, line2
-        elif self.gear2.inside_teeth:
-            if np.abs(rb2 - rb1) / distance > 1:
-                raise ValueError(
-                    "Unable to calculate line of action for this gear pair."
-                )
-            alpha = np.arccos((rb2 - rb1) / distance)
-            len_loa = np.sqrt(self.gear1.addendum_radius**2 - rb1**2)
-            startpoint1 = center1 + rotate_vector(-diff_vector_unit, alpha) * rb1
-            endpoint1 = (
-                startpoint1 - rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
-            )
-            line1 = crv.LineCurve(p0=startpoint1, p1=endpoint1)
-            startpoint2 = mirror_diffline(startpoint1)
-            endpoint2 = mirror_diffline(endpoint1)
-            line2 = crv.LineCurve(p0=startpoint2, p1=endpoint2)
-            return line1, line2
-        else:
-            if np.abs(rb2 + rb1) / distance > 1:
-                raise ValueError(
-                    "Unable to calculate line of action for this gear pair."
-                )
-            alpha = np.arccos((rb1 + rb2) / distance)
-            line1 = crv.LineCurve(
-                p0=center1 + rotate_vector(diff_vector_unit, alpha) * rb1,
-                p1=center2 + rotate_vector(-diff_vector_unit, alpha) * rb2,
-            )
-            line2 = crv.LineCurve(
-                p0=center1 + rotate_vector(diff_vector_unit, -alpha) * rb1,
-                p1=center2 + rotate_vector(-diff_vector_unit, -alpha) * rb2,
-            )
-            return line1, line2
+            ** 2,
+            x0=guess,
+        )
+        return sol.x[0]
+
+    ra_point_1 = circle_line_intersect(add_1, loa1, guess=[midpoint_1])
+    rd_point_1 = circle_line_intersect(ded_1, loa1, guess=[midpoint_1])
+    ra_point_2 = circle_line_intersect(add_2, loa1, guess=[midpoint_1])
+    rd_point_2 = circle_line_intersect(ded_2, loa1, guess=[midpoint_1])
+    points = np.sort([ra_point_1, rd_point_1, ra_point_2, rd_point_2])
+    point_idx_1 = np.where((points - midpoint_1) > 0)[0][0]
+    point_idx_2 = np.where((points - midpoint_1) < 0)[0][-1]
+
+    trim_points = [points[point_idx_2], points[point_idx_1]]
+
+    line1 = crv.LineCurve(p0=loa1(trim_points[0]), p1=loa1(trim_points[1]))
+    line2 = crv.LineCurve(p0=loa2(trim_points[0]), p1=loa2(trim_points[1]))
+    return line1, line2
 
 
 class InvoluteRack:
