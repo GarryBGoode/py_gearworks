@@ -46,3 +46,6 @@ OUT = np.array((0.0, 0.0, 1.0)).reshape(VSHAPE)
 """One unit step in the positive Z direction."""
 
 UNIT3X3 = np.eye(3)
+
+# Labels
+LABEL_INVOLUTE_FLANK = "involute_flank"

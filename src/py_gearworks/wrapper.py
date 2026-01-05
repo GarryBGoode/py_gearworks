@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
 import numpy as np
 from py_gearworks.core import *
 from py_gearworks.conv_build123d import *
@@ -478,10 +479,21 @@ class InvoluteGear(GearInfoMixin):
             0 means at the bottom, 1 at the top. Default is 0.
         """
         z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
-        r = self.gearcore.shape_recipe(z).tooth_generator.get_base_radius()
-        trf = self.gearcore.transform * self.gearcore.shape_recipe(z).transform
+        invo_curve, trf = self.involute_curve_at_z(z)
+        r = invo_curve.base_radius
         circle_ref = crv.ArcCurve(radius=r, center=ORIGIN, angle=2 * PI).transform(trf)
         return circle_ref
+
+    def involute_curve_at_z(
+        self, z_ratio: float = 0
+    ) -> Tuple[crv.InvoluteCurve | crv.OctoidCurve, GearTransform]:
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.gearcore.curve_gen_at_z(z)
+        curves = profile.tooth_curve.get_curves()
+        for curve in curves:
+            if hasattr(curve, "label") and curve.label == LABEL_INVOLUTE_FLANK:
+                return curve, self.gearcore.transform * profile.transform
+        return None, None
 
     def update_tooth_param(self):
         """Updates the tooth parameters for the gear. (pitch angle calculated here)"""
@@ -703,6 +715,8 @@ class InvoluteGear(GearInfoMixin):
                 other.pitch_angle,
                 gear1_inside_ring=self.inside_teeth,
                 gear2_inside_ring=other.inside_teeth,
+            ) + angle_bias / 2 * backlash_act / self.pitch_radius / np.cos(
+                self.inputparam.pressure_angle
             )
         else:
             if np.abs(self.beta + other.beta) > 1e-6:
@@ -2068,24 +2082,23 @@ def generate_line_of_contact(
     ded_2 = circles_2.r_d_curve
 
     def get_minmax_point(gear):
-        tooth_gen = gear.gearcore.shape_recipe(gear.p2z(z_level)).tooth_generator
-        tooth_curve = tooth_gen.generate_tooth_curve()
-        invo_curves = [
-            curve
-            for curve in tooth_curve.get_curves()
-            if isinstance(curve, crv.InvoluteCurve)
-        ]
-        invo_min_point = invo_curves[-1](0)
-        invo_max_point = invo_curves[-1](1)
+        invo_curve, trf = gear.involute_curve_at_z(z_level)
+        invo_min_point = trf(invo_curve(0))
+        invo_max_point = trf(invo_curve(1))
         return invo_min_point, invo_max_point
 
-    module = gear1.module
     min_point_1, max_point_1 = get_minmax_point(gear1)
     min_point_2, max_point_2 = get_minmax_point(gear2)
-    min_point_1_rad = np.linalg.norm(min_point_1[:2]) * module
-    min_point_2_rad = np.linalg.norm(min_point_2[:2]) * module
-    max_point_1_rad = np.linalg.norm(max_point_1[:2]) * module
-    max_point_2_rad = np.linalg.norm(max_point_2[:2]) * module
+    center1 = gear1.center_point_at_z(gear1.p2z(z_level))
+    center2 = gear2.center_point_at_z(gear2.p2z(z_level))
+    min_point_1 -= center1
+    min_point_2 -= center2
+    max_point_1 -= center1
+    max_point_2 -= center2
+    min_point_1_rad = np.linalg.norm(min_point_1[:2])
+    min_point_2_rad = np.linalg.norm(min_point_2[:2])
+    max_point_1_rad = np.linalg.norm(max_point_1[:2])
+    max_point_2_rad = np.linalg.norm(max_point_2[:2])
     if max_point_1_rad < add_1.radius:
         add_1.radius = max_point_1_rad
     if max_point_2_rad < add_2.radius:

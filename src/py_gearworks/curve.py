@@ -79,6 +79,9 @@ class Curve:
         # used for length-parametrization conversion
         self.t2s_lookup = {"t": np.array([-1e6, 1e6]), "s": np.array([-1e6, 1e6])}
 
+        # Optional label for the curve
+        self.label: str = ""
+
         # vectorize feature is used to iterate over np.array inputs,
         # to eg. generate 100 points on the curve with np.linspace
         # if curve_function already handles array inputs, this can be disabled
@@ -351,6 +354,7 @@ class CurveChain(Curve):
         self.curves: list[Curve] = [*curves]
         self._active = active
         self.update_lengths()
+        self.label: str = ""
         # super().__init__() is actually not needed.
         # the internal data of a curve relates to handling its function(),
         #   a curvechain has no function() of its own
@@ -474,7 +478,7 @@ class CurveChain(Curve):
         #   function of the chain makes little sense
         return vectorize(self.curve_list_eval)(p)
 
-    def get_curves(self, lerp_inactive=False):
+    def get_curves(self, lerp_inactive=False) -> list[Curve]:
         """Return the list of curves in the chain. Flattens the array structure if there are nested chains."""
         curve_list = []
         for curve in self.curves:

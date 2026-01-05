@@ -17,16 +17,16 @@ gear1 = pgw.SpurGear(
     height=5,
     profile_shift=0.45,
     module=2.5,
-    tip_fillet=0.0,
-    root_fillet=0.0,
+    tip_fillet=0.2,
+    root_fillet=0.1,
 )
 gear2 = pgw.SpurGear(
     number_of_teeth=n2,
     height=5,
     profile_shift=-0.2,
     module=2.5,
-    tip_fillet=0.0,
-    root_fillet=0.0,
+    tip_fillet=0.2,
+    root_fillet=0.1,
 )
 
 
@@ -45,8 +45,7 @@ a_gear2 = Compound(
     label="gear2",
 )
 
-gear1.mesh_to(gear2, target_dir=pgw.LEFT, backlash=0.2, angle_bias=-1)
-
+gear1.mesh_to(gear2, target_dir=pgw.LEFT, backlash=0.1, angle_bias=-1)
 
 line_of_contact = pgw.generate_line_of_contact(gear1, gear2, z_level=1)
 edge_loc = pgw.line_to_b123d(line_of_contact[0])
@@ -69,7 +68,7 @@ animation.add_track("/gears/gear1", "rz", time_track, gear1_track)
 animation.add_track("/gears/gear2", "rz", time_track, gear2_track)
 
 
-show(gears, deviation=0.005, angular_tolerance=0.015)
+show(gears, deviation=0.01, angular_tolerance=0.025)
 
 # Start animation
 animation.animate(speed=1)
