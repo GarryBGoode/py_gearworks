@@ -4,7 +4,7 @@ from ocp_vscode import *
 import numpy as np
 
 n1 = 13
-n2 = 53
+n2 = 23
 
 cone_angle_1, cone_angle_2 = pgw.cone_angle_from_teeth(n1, n2)
 
@@ -48,7 +48,7 @@ def get_minmax_point(gear):
 
 
 gear2.center = gear2.pitch_radius * pgw.RIGHT
-gear1.mesh_to(gear2, target_dir=pgw.LEFT, angle_bias=1)
+gear1.mesh_to(gear2, target_dir=pgw.DOWN, angle_bias=1)
 a_gear1.location = gear1.center_location_bottom
 a_gear2.location = gear2.center_location_bottom
 
@@ -68,13 +68,8 @@ edge_loc2 = pgw.curve_to_edges(loc_gears[1])
 edge_loc1.color = Color("red")
 edge_loc2.color = Color("blue")
 
-rb = (
-    np.sin(gear1.gamma)
-    * np.cos(gear1.inputparam.pressure_angle)
-    * gear1.radius_spherical
-)
 
-
+contact_ratio = pgw.get_contact_ratio_2D(gear1, gear2, z_value)
 print(f"Contact ratio: {contact_ratio:.3f}")
 
 gears = Compound(
