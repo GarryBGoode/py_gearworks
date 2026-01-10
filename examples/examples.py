@@ -318,7 +318,7 @@ def bevel_chain():
     gear = BevelGear(
         number_of_teeth=10,
         cone_angle=PI / 4,
-        profile_shift=0.5,
+        profile_shift=0.0,
         height=5,
         module=1.5,
     )
@@ -478,4 +478,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(helical_gears(), deviation=0.05, angular_tolerance=0.1)
+    show(bevel_chain(), deviation=0.05, angular_tolerance=0.1)

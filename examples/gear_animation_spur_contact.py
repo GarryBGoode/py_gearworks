@@ -44,8 +44,8 @@ a_gear2 = Compound(
     ],
     label="gear2",
 )
-
-gear1.mesh_to(gear2, target_dir=pgw.LEFT, backlash=0.1, angle_bias=-1)
+gear2.center = gear2.pitch_radius * pgw.UP
+gear1.mesh_to(gear2, target_dir=pgw.DOWN, backlash=0.1, angle_bias=-1)
 
 line_of_contact = pgw.generate_line_of_contact(gear1, gear2, z_level=1)
 edge_loc = pgw.line_to_b123d(line_of_contact[0])
@@ -68,44 +68,7 @@ animation.add_track("/gears/gear1", "rz", time_track, gear1_track)
 animation.add_track("/gears/gear2", "rz", time_track, gear2_track)
 
 
-show(gears, deviation=0.01, angular_tolerance=0.025)
+show(gears, deviation=0.02, angular_tolerance=0.055)
 
 # Start animation
 animation.animate(speed=1)
-
-
-# Used for generating screenshots for documentation via tcv_screenshots
-def main():
-    from tcv_screenshots import save_model, get_saved_models
-
-    N_saver = 30
-    angle_1 = gear1.pitch_angle * 180 / np.pi / N_saver
-    angle_2 = gear2.pitch_angle * 180 / np.pi / N_saver
-
-    for k in range(N_saver):
-        b_gear1 = (
-            gear1.center_location_bottom
-            * Rotation((0, 0, angle_1 * k))
-            * gear1.center_location_bottom.inverse()
-            * a_gear1
-        )
-        b_gear2 = (
-            gear2.center_location_bottom
-            * Rotation((0, 0, -angle_2 * k))
-            * gear2.center_location_bottom.inverse()
-            * a_gear2
-        )
-        gears = Compound(children=[b_gear1, b_gear2], label="gears")
-
-        save_model(
-            gears,
-            f"bevelgears_{k:02d}",
-            {
-                "cadWidth": 800,
-                "height": 600,
-                "position": (20, -20, 15),
-                "target": (0, 0, 5),
-                "zoom": 1.5,
-            },
-        )
-    return get_saved_models()

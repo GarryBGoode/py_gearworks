@@ -1106,6 +1106,15 @@ class LineCurve(Curve):
         p1 = transform(self.p1)
         return LineCurve(p0, p1, active=self.active)
 
+    def set_start_and_end_on(self, s0, s1):
+        self.p0, self.p1 = self(s0), self(s1)
+
+    def set_start_on(self, s0):
+        self.p0 = self(s0)
+
+    def set_end_on(self, s1):
+        self.p1 = self(s1)
+
 
 class ArcCurve(Curve):
     """Class to represent an arc as a Curve."""
@@ -1472,6 +1481,8 @@ class TransformedCurve(Curve):
         self,
         transform: callable,
         curve: Curve,
+        t0=0,
+        t1=1,
         params=None,
         enable_vectorize=False,
         active=True,
@@ -1480,16 +1491,19 @@ class TransformedCurve(Curve):
         self.transform_method = transform
 
         super().__init__(
-            lambda t: self.apply_transform(self.target_curve(t)),
+            self.transformed_value,
             active=self.target_curve.active,
-            t0=0,
-            t1=1,
+            t0=t0,
+            t1=t1,
             params=params,
             enable_vectorize=enable_vectorize,
         )
 
     def apply_transform(self, point):
         return self.transform_method(point, **self.params)
+
+    def transformed_value(self, t):
+        return self.apply_transform(self.target_curve(t))
 
 
 class MirroredCurve(TransformedCurve):

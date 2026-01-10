@@ -40,6 +40,13 @@ def project_vector_to_plane(v, plane_normal):
     return v - np.dot(v, plane_normal) * plane_normal
 
 
+def project_point_to_line(p, line_point, line_dir):
+    line_dir_norm = normalize_vector(line_dir)
+    v = p - line_point
+    d = np.dot(v, line_dir_norm)
+    return line_point + d * line_dir_norm
+
+
 def angle_of_vector_in_xy(v):
     return np.arctan2(v[1], v[0])
 
@@ -627,6 +634,10 @@ def octoid(
     v_offs=ORIGIN,
     z_offs=0.0,
 ):
+    # taken from Giorgio Figliolini:
+    # Algorithms for Involute and Octoidal Bevel-Gear Generation
+    # DOI: 10.1115/1.1900147
+
     # pitch angle: beta
     # pressure angle: phi
     # r: fundamental sphere radius
@@ -674,6 +685,56 @@ def octoid(
     v = np.array([v0, v1, v2]) * R
 
     rot = scp_Rotation.from_euler("yz", angles=[PI, PI / 2 + angle])
+    zshift = np.sqrt(sphere_rad**2 - base_rad**2)
+    v = rot.apply(v)
+    return v + zshift * OUT
+
+
+def octoid_contact(
+    t,
+    base_rad=0.5,
+    sphere_rad=1.0,
+    alpha=20 * PI / 180,
+    angle=0.0,
+    v_offs=ORIGIN,
+    z_offs=0.0,
+):
+    # taken from Giorgio Figliolini:
+    # Algorithms for Involute and Octoidal Bevel-Gear Generation
+    # DOI: 10.1115/1.1900147
+
+    # pitch angle: beta
+    # pressure angle: phi
+    # r: fundamental sphere radius
+    # alpha1: rolling parameter
+    # alpha: flat tooth flank angle
+    beta = np.arcsin(base_rad / sphere_rad)
+    alpha_1 = t
+    r = sphere_rad
+
+    def s(x):
+        return np.sin(x)
+
+    def c(x):
+        return np.cos(x)
+
+    def s2(x):
+        return np.sin(x) ** 2
+
+    def c2(x):
+        return np.cos(x) ** 2
+
+    a1sb = alpha_1 * s(beta)
+
+    R = -r / np.sqrt(s2(alpha) * s2(alpha_1 * s(beta)) + c2(alpha_1 * s(beta)))
+
+    v0 = c2(alpha) * s(a1sb) * c(a1sb)
+    v1 = -s2(alpha) * s2(a1sb) - c2(a1sb)
+    v2 = s(alpha) * c(alpha) * s(a1sb)
+
+    v = R * np.array([v0, v1, v2])
+
+    rot = scp_Rotation.from_euler("yz", angles=[PI, -PI / 2 + angle])
     zshift = np.sqrt(sphere_rad**2 - base_rad**2)
     v = rot.apply(v)
     return v + zshift * OUT

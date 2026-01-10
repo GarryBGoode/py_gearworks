@@ -246,7 +246,7 @@ class OctoidTooth(GearToothConicGenerator):
                 involute_curve, plane_normal=UP, guess=1
             )
             involute_curve.set_end_on(sol1.x[0])
-
+            involute_curve.label = LABEL_INVOLUTE_FLANK
             return involute_curve
         else:
             R = np.abs(rp / np.sin(gamma))
@@ -259,8 +259,9 @@ class OctoidTooth(GearToothConicGenerator):
                 octoid_curve, offset=ORIGIN, plane_normal=UP, guess=1
             )
             octoid_curve.set_end_on(sol1.x[0])
+            octoid_curve.label = LABEL_INVOLUTE_FLANK
 
-        return octoid_curve
+            return octoid_curve
 
 
 class OctoidUndercutTooth(GearToothConicGenerator):
@@ -548,18 +549,19 @@ def trim_involute_undercut(
             guess=guess,
             method=crv.IntersectMethod.MINDISTANCE,
         )
-    ps = tooth_curve.get_length_portions()
-    for k in range(4):
-        if sol.x[0] < ps[1]:
-            # undercut intersecting the involute-extension line is unlikely,
-            # try again with a different guess
-            sol = crv.find_curve_intersect(
-                tooth_curve,
-                undercut_curve,
-                guess=[1, sol.x[1] + 0.1 * k],
-            )
-        else:
-            break
+    if isinstance(tooth_curve, crv.CurveChain):
+        ps = tooth_curve.get_length_portions()
+        for k in range(4):
+            if sol.x[0] < ps[1]:
+                # undercut intersecting the involute-extension line is unlikely,
+                # try again with a different guess
+                sol = crv.find_curve_intersect(
+                    tooth_curve,
+                    undercut_curve,
+                    guess=[1, sol.x[1] + 0.1 * k],
+                )
+            else:
+                break
 
     tooth_curve.set_start_on(sol.x[0])
     undercut_curve.set_end_on(sol.x[1])

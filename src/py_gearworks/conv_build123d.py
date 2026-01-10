@@ -591,9 +591,13 @@ def curve_to_edges(curve: crv.Curve):
     elif isinstance(curve, crv.LineCurve):
         return [line_to_b123d(curve)]
     elif isinstance(curve, crv.TransformedCurve):
-        nurb = crv.convert_curve_nurbezier(curve.target_curve)
-        nurb.apply_transform(curve.transform_method)
-        return gen_splines(nurb)
+        if curve.t_0 != 0 or curve.t_1 != 1:
+            nurb = crv.convert_curve_nurbezier(curve)
+            return gen_splines(nurb)
+        else:
+            nurb = crv.convert_curve_nurbezier(curve.target_curve)
+            nurb.apply_transform(curve.transform_method)
+            return gen_splines(nurb)
     else:
         nurb = crv.convert_curve_nurbezier(curve)
         return gen_splines(nurb)
