@@ -2339,17 +2339,19 @@ class InvoluteRack:
         # pitch = module*PI = PI
         pitch = PI
 
+        backlash_value = self.backlash / (2 * np.cos(self.pressure_angle))
+
         # Set up reference points for trapezoidal rack profile
         ref_point_a_0 = RIGHT * self.addendum_coefficient
         ref_point_a = RIGHT * self.addendum_coefficient + DOWN * (
             pitch / 4
             - np.tan(self.pressure_angle) * self.addendum_coefficient
-            - self.backlash
+            - backlash_value
         )
         ref_point_d = LEFT * self.dedendum_coefficient + DOWN * (
             pitch / 4
             + np.tan(self.pressure_angle) * self.dedendum_coefficient
-            - self.backlash
+            - backlash_value
         )
         ref_point_c = DOWN * pitch / 2 + LEFT * self.dedendum_coefficient
         ref_point_o = ref_point_c + LEFT
@@ -2428,7 +2430,12 @@ class InvoluteRack:
         return self.part_transformed
 
     def mesh_to(
-        self, gear: "InvoluteGear", target_dir: np.ndarray = RIGHT, offset: float = 0
+        self,
+        gear: "InvoluteGear",
+        target_dir: np.ndarray = RIGHT,
+        offset: float = 0,
+        backlash: float = None,
+        angle_bias: float = 0,
     ):
         """Aligns this rack to a gear object.
 
@@ -2443,6 +2450,13 @@ class InvoluteRack:
         offset: float
             Amount of teeth to be offset in the rack direction.
             Default is 0 which results the center of the rack positioned to the gear.
+        backlash: float
+            Backlash value to be used in the meshing. If None, the rack's and gear's
+            backlash parameter (for tooth modification) is used. Default is None.
+        angle_bias: float
+            Offset to be used inside backlash. This is a linear shift, but named angle
+            to becompatible with gear meshing. Value 1 shifts completely to the right,
+            -1 to the left within the backlash play. Default is 0.
         """
         #
         # mult from right: vector in gear's coordinate orientation
@@ -2459,8 +2473,30 @@ class InvoluteRack:
             gear.gearcore.transform.orientation
             @ scp_Rotation.from_euler("z", PI + angle_of_target_dir).as_matrix()
         )
-        self.position = gear.gearcore.transform.center + target_dir_proj * (
-            gear.pitch_radius + gear.inputparam.profile_shift * gear.module
+        backlash_param = gear.inputparam.backlash + self.backlash
+        if backlash is None:
+            backlash = backlash_param
+
+        # Backlash from profile modification needs no axial distance correction
+        backlash_adjust = (
+            (backlash - backlash_param)
+            * gear.module
+            / (2 * np.sin(self.pressure_angle))
+        )
+        # Shift adjustment due to angle bias needs correction from total backlash
+        shift_adjust = (
+            angle_bias * backlash * gear.module / (2 * np.cos(self.pressure_angle))
+        )
+        target_dir_norm = np.cross(gear.gearcore.transform.z_axis, target_dir_proj)
+        self.position = (
+            gear.gearcore.transform.center
+            + target_dir_proj
+            * (
+                gear.pitch_radius
+                + gear.inputparam.profile_shift * gear.module
+                + backlash_adjust
+            )
+            + target_dir_norm * shift_adjust
         )
 
 
