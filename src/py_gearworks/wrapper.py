@@ -2233,6 +2233,37 @@ def get_contact_ratio_2D(
     return contact_ratio
 
 
+def get_contact_ratio(gear1: InvoluteGear, gear2: InvoluteGear) -> float:
+    """Calculates the contact ratio of two meshing gears, including helix angle
+    contribution (overlap ratio).
+
+    Arguments
+    ----------
+    gear1: InvoluteGear
+        The first gear object.
+    gear2: InvoluteGear
+        The second gear object.
+    Returns
+    -------
+    float
+        The contact ratio of the gear pair.
+    """
+    contact_ratio_2D = get_contact_ratio_2D(gear1, gear2, z_ratio=0.5)
+    z_refs = np.linspace(gear1.gearcore.z_vals[0], gear1.gearcore.z_vals[1], 11)
+    angle_vals = [gear1.gearcore.shape_recipe(z).transform.angle for z in z_refs]
+
+    # determining total twist angle from samples
+    # angle change can be more complex than helix angle (e.g. herringbone)
+    angle_delta = np.max(angle_vals) - np.min(angle_vals)
+    overlap_ratio = angle_delta / gear1.pitch_angle
+    total_contact_ratio = contact_ratio_2D + overlap_ratio
+
+    # if contact ratio is zero or negative, means no contact
+    if contact_ratio_2D < 0:
+        total_contact_ratio = 0
+    return total_contact_ratio
+
+
 class InvoluteRack:
     """Class for generating an involute rack.
 

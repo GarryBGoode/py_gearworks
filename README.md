@@ -44,8 +44,6 @@ Work in progress / partially supported:
 - Racks
 - Backlash control
 - Contact ratio calculation
-    - Spur and straight bevel CR available
-    - Helical gears and racks not availble
 
 Not yet supported:
 
