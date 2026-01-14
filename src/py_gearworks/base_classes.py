@@ -202,11 +202,18 @@ class GearTransformData(TransformData):
         inv_orient = self.orientation.transpose()
         inv_angle = scp_Rotation.from_euler("z", -self.angle).as_matrix()
         return GearTransformData(
-            center=-inv_orient @ inv_angle @ self.center * self.scale,
+            center=-self.center
+            @ inv_angle.transpose()
+            @ inv_orient.transpose()
+            / self.scale,
             orientation=inv_orient,
             scale=1 / self.scale,
             angle=-self.angle,
         )
+
+    @property
+    def inverse(self):
+        return self.invert()
 
 
 def apply_gear_transform(points: np.ndarray, data: GearTransformData) -> np.ndarray:
@@ -244,14 +251,21 @@ class GearTransform(GearTransformData):
 
     def invert(self):
         """Invert the transformation."""
-        inv_orient = self.orientation
-        inv_angle = scp_Rotation.from_euler("z", self.angle).as_matrix()
+        inv_orient = self.orientation.transpose()
+        inv_angle = scp_Rotation.from_euler("z", -self.angle).as_matrix()
         return GearTransform(
-            center=-self.center @ inv_orient @ inv_angle / self.scale,
-            orientation=inv_orient.transpose(),
+            center=-self.center
+            @ inv_angle.transpose()
+            @ inv_orient.transpose()
+            / self.scale,
+            orientation=inv_orient,
             scale=1 / self.scale,
             angle=-self.angle,
         )
+
+    @property
+    def inverse(self):
+        return self.invert()
 
 
 @dataclasses.dataclass
@@ -462,6 +476,11 @@ class ConicData:
         )
 
     @property
+    def center_untransformed(self):
+        """Spherical center (tip) of the cone without transformation."""
+        return OUT * self.base_radius / np.tan(self.gamma)
+
+    @property
     def center_base(self):
         """Center of the base circle of the cone."""
         return apply_transform(ORIGIN, self.transform)
@@ -471,6 +490,12 @@ class ConicData:
         """Radius of the sphere that is concentric with the cone and contains the base
         circle. Always positive."""
         return np.abs(self.base_radius / np.sin(self.gamma) * self.transform.scale)
+
+    @property
+    def spherical_radius_untransformed(self):
+        """Radius of the sphere that is concentric with the cone and contains the base
+        circle without transformation. Always positive."""
+        return np.abs(self.base_radius / np.sin(self.gamma))
 
     # shorthands
     @property

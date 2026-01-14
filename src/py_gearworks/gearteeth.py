@@ -68,6 +68,8 @@ class InvoluteTooth(GearToothConicGenerator):
                 p0=0.5 * involute_curve(0), p1=involute_curve(0)
             )
 
+            involute_curve.label = LABEL_INVOLUTE_FLANK
+
             return crv.CurveChain(connector_line, involute_curve)
 
         else:
@@ -122,6 +124,7 @@ class InvoluteTooth(GearToothConicGenerator):
             )
             connector_curve.reverse()
 
+            involute_curve.label = LABEL_INVOLUTE_FLANK
             return crv.CurveChain(connector_curve, involute_curve)
 
 
@@ -243,7 +246,7 @@ class OctoidTooth(GearToothConicGenerator):
                 involute_curve, plane_normal=UP, guess=1
             )
             involute_curve.set_end_on(sol1.x[0])
-
+            involute_curve.label = LABEL_INVOLUTE_FLANK
             return involute_curve
         else:
             R = np.abs(rp / np.sin(gamma))
@@ -256,8 +259,9 @@ class OctoidTooth(GearToothConicGenerator):
                 octoid_curve, offset=ORIGIN, plane_normal=UP, guess=1
             )
             octoid_curve.set_end_on(sol1.x[0])
+            octoid_curve.label = LABEL_INVOLUTE_FLANK
 
-        return octoid_curve
+            return octoid_curve
 
 
 class OctoidUndercutTooth(GearToothConicGenerator):
@@ -327,6 +331,7 @@ class OctoidUndercutTooth(GearToothConicGenerator):
                 involute_curve, plane_normal=UP, guess=1
             )
             involute_curve.set_end_on(sol1.x[0])
+            involute_curve.label = LABEL_INVOLUTE_FLANK
             return involute_curve
         else:
 
@@ -340,8 +345,11 @@ class OctoidUndercutTooth(GearToothConicGenerator):
                 octoid_curve, offset=ORIGIN, plane_normal=UP, guess=1
             )
             octoid_curve.set_end_on(sol1.x[0])
-
-        return octoid_curve
+            # Octoid curve is not the same as an involute curve,
+            # however, this is used for identifying the flank in the curve chain,
+            # so it is close enough.
+            octoid_curve.label = LABEL_INVOLUTE_FLANK
+            return octoid_curve
 
     def get_default_undercut_ref_point(
         self,
@@ -541,13 +549,19 @@ def trim_involute_undercut(
             guess=guess,
             method=crv.IntersectMethod.MINDISTANCE,
         )
-    ps = tooth_curve.get_length_portions()
-    if sol.x[0] < ps[1]:
-        # undercut intersecting the involute-extension line is unlikely,
-        # try again with a different guess
-        sol = crv.find_curve_intersect(
-            tooth_curve, undercut_curve, guess=sol.x[:2] + np.array([0.2, 0.2])
-        )
+    if isinstance(tooth_curve, crv.CurveChain):
+        ps = tooth_curve.get_length_portions()
+        for k in range(4):
+            if sol.x[0] < ps[1]:
+                # undercut intersecting the involute-extension line is unlikely,
+                # try again with a different guess
+                sol = crv.find_curve_intersect(
+                    tooth_curve,
+                    undercut_curve,
+                    guess=[1, sol.x[1] + 0.1 * k],
+                )
+            else:
+                break
 
     tooth_curve.set_start_on(sol.x[0])
     undercut_curve.set_end_on(sol.x[1])

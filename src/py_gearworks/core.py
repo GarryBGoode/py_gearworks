@@ -111,6 +111,22 @@ class GearPolarTransform(ConicData):
                 ).transpose()
                 return spherical_to_xyz(point2, center=self.center * z_comp) * z_comp
 
+    def circle_from_point(self, point: np.ndarray) -> crv.ArcCurve:
+        """Generate a circle aligned with the cone axis, at the given point."""
+
+        p1 = apply_transform(point, self.transform.invert())
+        center = apply_transform(OUT * p1[2], self.transform)
+        return crv.ArcCurve.from_point_center_angle(
+            p0=point, center=center, angle=2 * PI, axis=self.transform.z_axis
+        )
+
+    def great_circle_from_point(self, point: np.ndarray) -> crv.ArcCurve:
+        """Generate a great circle (centered at cone center) at the given point."""
+
+        return crv.ArcCurve.from_point_center_angle(
+            p0=point, center=self.center, angle=2 * PI, axis=self.transform.z_axis
+        )
+
 
 @dataclasses.dataclass
 class FilletParam:

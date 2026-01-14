@@ -76,11 +76,11 @@ def gear_and_rack():
     # racks can mesh to gears, but gears can't (yet) mesh to racks
     rack1.mesh_to(gear1, target_dir=RIGHT)
 
-    gear2 = SpurGear(number_of_teeth=20, height=10)
+    gear2 = SpurGear(number_of_teeth=20, height=10, backlash=0.05)
     gear2.center = LEFT * 50
-    rack2 = InvoluteRack(number_of_teeth=40, height=10)
+    rack2 = InvoluteRack(number_of_teeth=40, height=10, backlash=0.05)
     # offset parameter moves the rack further along
-    rack2.mesh_to(gear2, target_dir=LEFT, offset=10)
+    rack2.mesh_to(gear2, target_dir=LEFT, offset=10, backlash=0.2, angle_bias=-1)
 
     gear_part_1 = gear1.build_part()
     rack_part_1 = rack1.build_part()
@@ -318,7 +318,7 @@ def bevel_chain():
     gear = BevelGear(
         number_of_teeth=10,
         cone_angle=PI / 4,
-        profile_shift=0.5,
+        profile_shift=0.0,
         height=5,
         module=1.5,
     )
@@ -478,4 +478,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(helical_gears(), deviation=0.05, angular_tolerance=0.1)
+    show(spur_gears(), deviation=0.05, angular_tolerance=0.1)

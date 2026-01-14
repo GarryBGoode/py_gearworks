@@ -32,7 +32,7 @@ Docs hosted on [readthedocs](https://gggears.readthedocs.io/en/latest/)
 | Cycloid           | Crowning          | Geartooth alignment to mesh           |
 | Inside-ring          
 
-Care was taken so that all (sensible) combination of supported features can be combined.
+It is a development goal that all (sensible) combination of supported features should be combined.
 Profile shifted cycloids don't exist, but inside-ring-bevel cycloids can be made. Undercut and profile shift is available for bevels - but positioning of profile shifted bevels is lacking. Please use complementary profile shifts for bevels.
 
 \* Positioning and backlash design is a bit of work-in-progress. Spur gears and parallel-axis helical gears can be placed with accurate backlash (inc. 0 backlash). This matters for profile shifted gears. Cross-axis helicals and bevel gears can only be positioned via nominal formula (can't adjust backlash via axial distance).
@@ -43,6 +43,7 @@ Profile shifted cycloids don't exist, but inside-ring-bevel cycloids can be made
 Work in progress / partially supported:
 - Racks
 - Backlash control
+- Contact ratio calculation
 
 Not yet supported:
 
@@ -52,7 +53,6 @@ Not yet supported:
 
 Planned upcoming other features
 - Planetary drive design
-- Contact ratio calculation
 - Backlash, contact ratio and profile shift optimization
 
 # Example

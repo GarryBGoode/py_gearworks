@@ -79,6 +79,9 @@ class Curve:
         # used for length-parametrization conversion
         self.t2s_lookup = {"t": np.array([-1e6, 1e6]), "s": np.array([-1e6, 1e6])}
 
+        # Optional label for the curve
+        self.label: str = ""
+
         # vectorize feature is used to iterate over np.array inputs,
         # to eg. generate 100 points on the curve with np.linspace
         # if curve_function already handles array inputs, this can be disabled
@@ -351,6 +354,7 @@ class CurveChain(Curve):
         self.curves: list[Curve] = [*curves]
         self._active = active
         self.update_lengths()
+        self.label: str = ""
         # super().__init__() is actually not needed.
         # the internal data of a curve relates to handling its function(),
         #   a curvechain has no function() of its own
@@ -474,7 +478,7 @@ class CurveChain(Curve):
         #   function of the chain makes little sense
         return vectorize(self.curve_list_eval)(p)
 
-    def get_curves(self, lerp_inactive=False):
+    def get_curves(self, lerp_inactive=False) -> list[Curve]:
         """Return the list of curves in the chain. Flattens the array structure if there are nested chains."""
         curve_list = []
         for curve in self.curves:
@@ -1102,6 +1106,15 @@ class LineCurve(Curve):
         p1 = transform(self.p1)
         return LineCurve(p0, p1, active=self.active)
 
+    def set_start_and_end_on(self, s0, s1):
+        self.p0, self.p1 = self(s0), self(s1)
+
+    def set_start_on(self, s0):
+        self.p0 = self(s0)
+
+    def set_end_on(self, s1):
+        self.p1 = self(s1)
+
 
 class ArcCurve(Curve):
     """Class to represent an arc as a Curve."""
@@ -1468,6 +1481,8 @@ class TransformedCurve(Curve):
         self,
         transform: callable,
         curve: Curve,
+        t0=0,
+        t1=1,
         params=None,
         enable_vectorize=False,
         active=True,
@@ -1476,16 +1491,19 @@ class TransformedCurve(Curve):
         self.transform_method = transform
 
         super().__init__(
-            lambda t: self.apply_transform(self.target_curve(t)),
+            self.transformed_value,
             active=self.target_curve.active,
-            t0=0,
-            t1=1,
+            t0=t0,
+            t1=t1,
             params=params,
             enable_vectorize=enable_vectorize,
         )
 
     def apply_transform(self, point):
         return self.transform_method(point, **self.params)
+
+    def transformed_value(self, t):
+        return self.apply_transform(self.target_curve(t))
 
 
 class MirroredCurve(TransformedCurve):

@@ -9,12 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
 import numpy as np
 from py_gearworks.core import *
 from py_gearworks.conv_build123d import *
 from build123d import Part
 from py_gearworks.gearteeth import *
 from py_gearworks.gearmath import *
+from scipy.optimize import root, minimize
 
 
 class GearInfoMixin:
@@ -193,7 +195,8 @@ class GearInfoMixin:
         c0, c1 = self.gearcore.shape_recipe.transform.center(
             z0
         ), self.gearcore.shape_recipe.transform.center(z1)
-        return np.linalg.norm((self.gearcore.transform(c0 - c1)))
+        scaler = self.gearcore.transform.scale
+        return np.linalg.norm(scaler * (c0 - c1))
 
     def radii_data_gen(self, z) -> GearRefCircles:
         """Generates the reference circles of the gear at a given z-value."""
@@ -216,6 +219,20 @@ class GearInfoMixin:
         return GearRefCircles(
             r_a_curve=r_a, r_d_curve=r_d, r_o_curve=r_o, r_p_curve=r_p
         )
+
+    def circle_at_point(self, point):
+        """Generates a reference circle at a given point in space."""
+
+        center = project_point_to_line(
+            point, self.gearcore.transform.center, self.gearcore.transform.z_axis
+        )
+        arc = crv.ArcCurve.from_point_center_angle(
+            center=center,
+            p0=point,
+            angle=2 * PI,
+            axis=self.gearcore.transform.z_axis,
+        )
+        return arc
 
     @property
     def radii_data_array(self):
@@ -476,10 +493,25 @@ class InvoluteGear(GearInfoMixin):
             0 means at the bottom, 1 at the top. Default is 0.
         """
         z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
-        r = self.gearcore.shape_recipe(z).tooth_generator.get_base_radius()
-        trf = self.gearcore.transform * self.gearcore.shape_recipe(z).transform
+        invo_curve, trf = self.involute_curve_at_z(z)
+        r = invo_curve.base_radius
         circle_ref = crv.ArcCurve(radius=r, center=ORIGIN, angle=2 * PI).transform(trf)
         return circle_ref
+
+    def involute_curve_at_z(
+        self, z_ratio: float = 0
+    ) -> Tuple[crv.InvoluteCurve | crv.OctoidCurve, GearTransform]:
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.gearcore.curve_gen_at_z(z)
+
+        if profile.tooth_curve.label == LABEL_INVOLUTE_FLANK:
+            return profile.tooth_curve, self.gearcore.transform * profile.transform
+        else:
+            curves = profile.tooth_curve.get_curves()
+            for curve in curves:
+                if hasattr(curve, "label") and curve.label == LABEL_INVOLUTE_FLANK:
+                    return curve, self.gearcore.transform * profile.transform
+        return None, None
 
     def update_tooth_param(self):
         """Updates the tooth parameters for the gear. (pitch angle calculated here)"""
@@ -525,10 +557,17 @@ class InvoluteGear(GearInfoMixin):
         def angle_func(z, coeff=spiral_coeff):
             return z * coeff
 
+        h_d = self.inputparam.dedendum_coefficient - self.inputparam.profile_shift
+        h_a = self.inputparam.addendum_coefficient + self.inputparam.profile_shift
+
+        h_o = np.max([h_d + 0.5, 2])
+        if self.inputparam.inside_teeth:
+            h_o = np.min([-h_a - 0.5, -2])
+
         limits = ToothLimitParamRecipe(
-            h_d=self.inputparam.dedendum_coefficient - self.inputparam.profile_shift,
-            h_a=self.inputparam.addendum_coefficient + self.inputparam.profile_shift,
-            h_o=-2 if self.inputparam.inside_teeth else 2,
+            h_d=h_d,
+            h_a=h_a,
+            h_o=h_o,
         )
 
         if self.inputparam.enable_undercut:
@@ -682,6 +721,7 @@ class InvoluteGear(GearInfoMixin):
                 other.cone_data,
                 self.inputparam.inside_teeth,
                 other.inputparam.inside_teeth,
+                offset=0,
             )
             self.gearcore.transform.center = v0
             self.gearcore.transform.orientation = calc_mesh_orientation(
@@ -701,6 +741,8 @@ class InvoluteGear(GearInfoMixin):
                 other.pitch_angle,
                 gear1_inside_ring=self.inside_teeth,
                 gear2_inside_ring=other.inside_teeth,
+            ) + angle_bias / 2 * backlash_act / self.pitch_radius / np.cos(
+                self.inputparam.pressure_angle
             )
         else:
             if np.abs(self.beta + other.beta) > 1e-6:
@@ -1956,10 +1998,14 @@ class CycloidGear(GearInfoMixin):
         return copy.deepcopy(self)
 
 
-class LineOfAction:
-    """Class for generating the line of action of two meshing gears.
+def generate_line_of_action(
+    gear1: InvoluteGear, gear2: InvoluteGear, z_level=1.0
+) -> tuple[crv.Curve, crv.Curve]:
+    """Generates the line of action of two meshing gears. Line of action starts
+    and ends at the base circle for standard external gears.
+    For inside gears, the line of action ends at the addendum circle of the ring.
 
-    Parameters
+    Arguments
     ----------
     gear1: InvoluteGear
         The first gear object.
@@ -1967,42 +2013,73 @@ class LineOfAction:
         The second gear object.
     z_ratio: float, optional
         Ratio of the height of the gears where the line of action should be calculated.
-        0 means at the bottom, 1 at the top. Default is 0.
+        0 means at the bottom, 1 at the top. Default is 1 (top).
+
+    Returns
+    -------
+    tuple[LineCurve, LineCurve]
+        Two LineCurve objects representing the line of action on each gear.
     """
+    diff_vector = gear2.center_point_at_z(z_level) - gear1.center_point_at_z(z_level)
+    distance = np.linalg.norm(diff_vector)
+    diff_vector_unit = diff_vector / distance
 
-    def __init__(self, gear1: InvoluteGear, gear2: InvoluteGear, z_ratio=0):
-        self.gear1: InvoluteGear = gear1
-        self.gear2: InvoluteGear = gear2
-        self.z_ratio = z_ratio
+    center1 = gear1.center_point_at_z(gear1.p2z(z_level))
+    center2 = gear2.center_point_at_z(gear2.p2z(z_level))
 
-    @property
-    def centerdiff(self):
-        return self.gear2.center_point_at_z(
-            self.gear2.p2z(self.z_ratio)
-        ) - self.gear1.center_point_at_z(self.gear1.p2z(self.z_ratio))
+    def mirror_diffline(p):
+        p1 = p - center1
+        p_norm = p1 - np.dot(p1, diff_vector_unit) * diff_vector_unit
+        return p - 2 * p_norm
 
-    def LOA_gen(self):
-        diff_vector = self.centerdiff
-        distance = np.linalg.norm(diff_vector)
-        diff_vector_unit = diff_vector / distance
+    if gear1.cone_angle != 0 or gear2.cone_angle != 0:
+        contact_dir = project_vector_to_plane(
+            diff_vector, gear2.cone_data.transform.z_axis
+        )
+        # need gear2->gear1 direction
+        contact_dir = -contact_dir / np.linalg.norm(contact_dir)
+        angle_rot_curve = angle_between_vectors(
+            gear2.cone_data.transform.x_axis, contact_dir
+        )
+        z_val = gear2.p2z(z_level)
 
-        rb1 = self.gear1.circle_involute_base(self.z_ratio).radius
-        rb2 = self.gear2.circle_involute_base(self.z_ratio).radius
-        center1 = self.gear1.center_point_at_z(self.gear1.p2z(self.z_ratio))
-        center2 = self.gear2.center_point_at_z(self.gear2.p2z(self.z_ratio))
+        def octo_func(t):
+            v = pgw.octoid_contact(
+                t,
+                gear2.cone_data.base_radius,
+                gear2.cone_data.spherical_radius_untransformed,
+                gear2.inputparam.pressure_angle,
+                angle=0,
+            )
+            rot1 = pgw.scp_Rotation.from_euler("y", pgw.PI / 2 - gear2.cone_angle / 2)
+            rot2 = pgw.scp_Rotation.from_euler(
+                "z", angle_rot_curve - gear2.gearcore.transform.angle
+            )
+            rot = rot2 * rot1
+            center1 = gear2.cone_data.center_untransformed
+            v2 = rot.apply(v - center1) + center1
+            trf_recipe = gear2.gearcore.shape_recipe(z_val).transform
+            # remove twist
+            trf_recipe.angle = 0
+            return gear2.gearcore.transform(apply_transform(v2, trf_recipe))
+            # return v
 
-        def mirror_diffline(p):
-            p1 = p - center1
-            p_norm = p1 - np.dot(p1, diff_vector_unit) * diff_vector_unit
-            return p - 2 * p_norm
+        curve1 = Curve(octo_func, t0=-0.5, t1=0.5)
+        mirror_v = np.cross(gear1.cone_data.transform.z_axis, diff_vector_unit)
+        mirror_v = mirror_v / np.linalg.norm(mirror_v)
+        curve2 = MirroredCurve(curve1.copy(), plane_normal=mirror_v, center=center2)
+        return curve1, curve2
 
-        if self.gear1.inside_teeth:
+    else:
+        rb1 = gear1.circle_involute_base(z_level).radius
+        rb2 = gear2.circle_involute_base(z_level).radius
+        if gear1.inside_teeth:
             if np.abs(rb2 - rb1) / distance > 1:
                 raise ValueError(
                     "Unable to calculate line of action for this gear pair."
                 )
             alpha = np.arccos((rb2 - rb1) / distance)
-            len_loa = np.sqrt(self.gear2.addendum_radius**2 - rb2**2)
+            len_loa = np.sqrt(gear2.addendum_radius**2 - rb2**2)
             startpoint1 = center2 + rotate_vector(-diff_vector_unit, alpha) * rb2
             endpoint1 = (
                 startpoint1 + rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
@@ -2012,13 +2089,13 @@ class LineOfAction:
             endpoint2 = mirror_diffline(endpoint1)
             line2 = crv.LineCurve(p0=startpoint2, p1=endpoint2)
             return line1, line2
-        elif self.gear2.inside_teeth:
+        elif gear2.inside_teeth:
             if np.abs(rb2 - rb1) / distance > 1:
                 raise ValueError(
                     "Unable to calculate line of action for this gear pair."
                 )
             alpha = np.arccos((rb2 - rb1) / distance)
-            len_loa = np.sqrt(self.gear1.addendum_radius**2 - rb1**2)
+            len_loa = np.sqrt(gear1.addendum_radius**2 - rb1**2)
             startpoint1 = center1 + rotate_vector(-diff_vector_unit, alpha) * rb1
             endpoint1 = (
                 startpoint1 - rotate_vector(diff_vector_unit, -PI / 2 + alpha) * len_loa
@@ -2043,6 +2120,148 @@ class LineOfAction:
                 p1=center2 + rotate_vector(-diff_vector_unit, -alpha) * rb2,
             )
             return line1, line2
+
+
+def generate_line_of_contact(
+    gear1: InvoluteGear, gear2: InvoluteGear, z_level=1.0
+) -> tuple[crv.Curve, crv.Curve]:
+    """Generates the line of contact of two meshing gears. Line of contact is the
+    trimmed version of the line of action that represents where actual contact occurs on
+    the gear.
+
+    Arguments
+    ----------
+    gear1: InvoluteGear
+        The first gear object.
+    gear2: InvoluteGear
+        The second gear object.
+    z_ratio: float, optional
+        Ratio of the height of the gears where the line of contact should be calculated.
+        0 means at the bottom, 1 at the top. Default is 1 (top).
+
+    Returns
+    -------
+    tuple[LineCurve, LineCurve]
+        Two LineCurve objects representing the line of contact on each gear.
+    """
+    loa1, loa2 = generate_line_of_action(gear1, gear2, z_level)
+
+    def get_minmax_point(gear: InvoluteGear):
+        invo_curve, trf = gear.involute_curve_at_z(z_level)
+        invo_min_point = trf(invo_curve(0))
+        invo_max_point = trf(invo_curve(1))
+        return invo_min_point, invo_max_point
+
+    min_point_1, max_point_1 = get_minmax_point(gear1)
+    min_point_2, max_point_2 = get_minmax_point(gear2)
+
+    add_1 = gear1.circle_at_point(max_point_1)
+    ded_1 = gear1.circle_at_point(min_point_1)
+    add_2 = gear2.circle_at_point(max_point_2)
+    ded_2 = gear2.circle_at_point(min_point_2)
+
+    sol_midpoint = find_curve_intersect(loa1, loa2)
+    midpoint_1 = sol_midpoint.x[0]
+
+    def circle_line_intersect(circle_curve, line_curve, guess):
+        sol0 = minimize(
+            lambda t: np.linalg.norm(line_curve(guess[0]) - circle_curve(t)), x0=0
+        )
+        sol = find_curve_intersect(
+            circle_curve,
+            line_curve,
+            guess=[sol0.x[0], guess[0]],
+            method=IntersectMethod.MINDISTANCE,
+        )
+        return sol.x[1]
+
+    ra_point_1 = circle_line_intersect(add_1, loa1, guess=[midpoint_1])
+    rd_point_1 = circle_line_intersect(ded_1, loa1, guess=[midpoint_1])
+    ra_point_2 = circle_line_intersect(add_2, loa1, guess=[midpoint_1])
+    rd_point_2 = circle_line_intersect(ded_2, loa1, guess=[midpoint_1])
+    points = np.sort([ra_point_1, rd_point_1, ra_point_2, rd_point_2])
+    point_idx_1 = np.where((points - midpoint_1) > 0)[0][0]
+    point_idx_2 = np.where((points - midpoint_1) < 0)[0][-1]
+
+    trim_points = [points[point_idx_2], points[point_idx_1]]
+
+    # curve1 = crv.LineCurve(p0=loa1(trim_points[0]), p1=loa1(trim_points[1]))
+    # curve2 = crv.LineCurve(p0=loa2(trim_points[0]), p1=loa2(trim_points[1]))
+    curve1 = loa1.copy()
+    curve1.set_start_and_end_on(trim_points[0], trim_points[1])
+    diff_vector = gear2.center_point_at_z(z_level) - gear1.center_point_at_z(z_level)
+    diff_vector_unit = diff_vector / np.linalg.norm(diff_vector)
+    mirror_v = np.cross(gear1.cone_data.transform.z_axis, diff_vector_unit)
+    mirror_v = mirror_v / np.linalg.norm(mirror_v)
+    curve2 = MirroredCurve(
+        curve1.copy(), plane_normal=mirror_v, center=gear2.center_point_at_z(z_level)
+    )
+    return curve1, curve2
+
+
+def get_contact_ratio_2D(
+    gear1: InvoluteGear, gear2: InvoluteGear, z_ratio=1.0
+) -> float:
+    """Calculates the contact ratio of two meshing gears, only considering a 2D
+    cross-section. Does not include ratio change from helix angle.
+
+    Arguments
+    ----------
+    gear1: InvoluteGear
+        The first gear object.
+    gear2: InvoluteGear
+        The second gear object.
+    z_ratio: float, optional
+        Ratio of the height of the gears where the contact ratio should be calculated.
+
+    Returns
+    -------
+    float
+        The contact ratio of the gear pair.
+    """
+
+    loc1, _ = generate_line_of_contact(gear1, gear2, z_level=1.0)
+
+    length_loc = loc1.length
+    tooth_spacing = (
+        gear1.pitch_angle
+        * gear1.pitch_radius
+        * gear1.gearcore.shape_recipe(gear1.p2z(z_ratio)).transform.scale
+        * np.cos(gear1.inputparam.pressure_angle)
+    )
+    contact_ratio = length_loc / tooth_spacing
+    return contact_ratio
+
+
+def get_contact_ratio(gear1: InvoluteGear, gear2: InvoluteGear) -> float:
+    """Calculates the contact ratio of two meshing gears, including helix angle
+    contribution (overlap ratio).
+
+    Arguments
+    ----------
+    gear1: InvoluteGear
+        The first gear object.
+    gear2: InvoluteGear
+        The second gear object.
+    Returns
+    -------
+    float
+        The contact ratio of the gear pair.
+    """
+    contact_ratio_2D = get_contact_ratio_2D(gear1, gear2, z_ratio=0.5)
+    z_refs = np.linspace(gear1.gearcore.z_vals[0], gear1.gearcore.z_vals[1], 11)
+    angle_vals = [gear1.gearcore.shape_recipe(z).transform.angle for z in z_refs]
+
+    # determining total twist angle from samples
+    # angle change can be more complex than helix angle (e.g. herringbone)
+    angle_delta = np.max(angle_vals) - np.min(angle_vals)
+    overlap_ratio = angle_delta / gear1.pitch_angle
+    total_contact_ratio = contact_ratio_2D + overlap_ratio
+
+    # if contact ratio is zero or negative, means no contact
+    if contact_ratio_2D < 0:
+        total_contact_ratio = 0
+    return total_contact_ratio
 
 
 class InvoluteRack:
@@ -2151,17 +2370,19 @@ class InvoluteRack:
         # pitch = module*PI = PI
         pitch = PI
 
+        backlash_value = self.backlash / (2 * np.cos(self.pressure_angle))
+
         # Set up reference points for trapezoidal rack profile
         ref_point_a_0 = RIGHT * self.addendum_coefficient
         ref_point_a = RIGHT * self.addendum_coefficient + DOWN * (
             pitch / 4
             - np.tan(self.pressure_angle) * self.addendum_coefficient
-            - self.backlash
+            - backlash_value
         )
         ref_point_d = LEFT * self.dedendum_coefficient + DOWN * (
             pitch / 4
             + np.tan(self.pressure_angle) * self.dedendum_coefficient
-            - self.backlash
+            - backlash_value
         )
         ref_point_c = DOWN * pitch / 2 + LEFT * self.dedendum_coefficient
         ref_point_o = ref_point_c + LEFT
@@ -2240,7 +2461,12 @@ class InvoluteRack:
         return self.part_transformed
 
     def mesh_to(
-        self, gear: "InvoluteGear", target_dir: np.ndarray = RIGHT, offset: float = 0
+        self,
+        gear: "InvoluteGear",
+        target_dir: np.ndarray = RIGHT,
+        offset: float = 0,
+        backlash: float = None,
+        angle_bias: float = 0,
     ):
         """Aligns this rack to a gear object.
 
@@ -2255,6 +2481,13 @@ class InvoluteRack:
         offset: float
             Amount of teeth to be offset in the rack direction.
             Default is 0 which results the center of the rack positioned to the gear.
+        backlash: float
+            Backlash value to be used in the meshing. If None, the rack's and gear's
+            backlash parameter (for tooth modification) is used. Default is None.
+        angle_bias: float
+            Offset to be used inside backlash. This is a linear shift, but named angle
+            to becompatible with gear meshing. Value 1 shifts completely to the right,
+            -1 to the left within the backlash play. Default is 0.
         """
         #
         # mult from right: vector in gear's coordinate orientation
@@ -2271,8 +2504,30 @@ class InvoluteRack:
             gear.gearcore.transform.orientation
             @ scp_Rotation.from_euler("z", PI + angle_of_target_dir).as_matrix()
         )
-        self.position = gear.gearcore.transform.center + target_dir_proj * (
-            gear.pitch_radius + gear.inputparam.profile_shift * gear.module
+        backlash_param = gear.inputparam.backlash + self.backlash
+        if backlash is None:
+            backlash = backlash_param
+
+        # Backlash from profile modification needs no axial distance correction
+        backlash_adjust = (
+            (backlash - backlash_param)
+            * gear.module
+            / (2 * np.sin(self.pressure_angle))
+        )
+        # Shift adjustment due to angle bias needs correction from total backlash
+        shift_adjust = (
+            angle_bias * backlash * gear.module / (2 * np.cos(self.pressure_angle))
+        )
+        target_dir_norm = np.cross(gear.gearcore.transform.z_axis, target_dir_proj)
+        self.position = (
+            gear.gearcore.transform.center
+            + target_dir_proj
+            * (
+                gear.pitch_radius
+                + gear.inputparam.profile_shift * gear.module
+                + backlash_adjust
+            )
+            + target_dir_norm * shift_adjust
         )
 
 
