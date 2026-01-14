@@ -16,7 +16,6 @@ def test_contact_ratio(
     num_teeth_2,
     module,
     beta,
-    height,
     root_fillet,
     tip_fillet,
     conic,
@@ -36,7 +35,7 @@ def test_contact_ratio(
     gear1 = pgw.InvoluteGear(
         number_of_teeth=num_teeth_1,
         module=module,
-        height=height,
+        height=3,
         helix_angle=beta,
         root_fillet=root_fillet,
         tip_fillet=tip_fillet,
@@ -46,7 +45,7 @@ def test_contact_ratio(
     gear2 = pgw.InvoluteGear(
         number_of_teeth=num_teeth_2,
         module=module,
-        height=height,
+        height=3,
         helix_angle=-beta,
         root_fillet=root_fillet,
         tip_fillet=tip_fillet,
