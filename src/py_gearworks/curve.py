@@ -1108,12 +1108,15 @@ class LineCurve(Curve):
 
     def set_start_and_end_on(self, s0, s1):
         self.p0, self.p1 = self(s0), self(s1)
+        self.update_lengths()
 
     def set_start_on(self, s0):
         self.p0 = self(s0)
+        self.update_lengths()
 
     def set_end_on(self, s1):
         self.p1 = self(s1)
+        self.update_lengths()
 
 
 class ArcCurve(Curve):

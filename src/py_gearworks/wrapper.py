@@ -2041,6 +2041,11 @@ def generate_line_of_action(
         angle_rot_curve = angle_between_vectors(
             gear2.cone_data.transform.x_axis, contact_dir
         )
+        angle_sign = np.dot(
+            np.cross(gear2.cone_data.transform.x_axis, contact_dir),
+            gear2.cone_data.transform.z_axis,
+        )
+        angle_rot_curve = angle_rot_curve * np.sign(angle_sign)
         z_val = gear2.p2z(z_level)
 
         def octo_func(t):
@@ -2220,7 +2225,7 @@ def get_contact_ratio_2D(
         The contact ratio of the gear pair.
     """
 
-    loc1, _ = generate_line_of_contact(gear1, gear2, z_level=1.0)
+    loc1, _ = generate_line_of_contact(gear1, gear2, z_level=z_ratio)
 
     length_loc = loc1.length
     tooth_spacing = (
