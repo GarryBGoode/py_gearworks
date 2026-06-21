@@ -474,8 +474,54 @@ def cycloid_drive():
     return (gear_part_1, gear_part_2)
 
 
+def cycloid_bearing():
+
+    # I saw something like this in a video, someone used 3d printed rollers
+    # in the shape of herringbone bevel gears for a self-locking thrust bearing.
+    # He used involute gears, but I think cycloid is better.
+    n1 = 6 * 11
+    n2 = 6
+    height = 10
+
+    gamma = np.arctan2(n1, n2)
+    gamma2 = np.pi / 2 - gamma
+    gear1 = CycloidGear(
+        number_of_teeth=n1,
+        height=height,
+        cone_angle=gamma * 2,
+        inside_cycloid_coefficient=1 / n1 / 2,
+        outside_cycloid_coefficient=1 / n1 / 2,
+        addendum_coefficient=4,
+        dedendum_coefficient=4,
+        helix_angle=PI / 4,
+        tip_truncation=0,
+        herringbone=True,
+    )
+    gear2 = CycloidGear(
+        number_of_teeth=n2,
+        height=height,
+        cone_angle=gamma2 * 2,
+        inside_cycloid_coefficient=1 / n2 / 2,
+        outside_cycloid_coefficient=1 / n2 / 2,
+        addendum_coefficient=4,
+        dedendum_coefficient=4,
+        helix_angle=-PI / 4,
+        tip_truncation=0,
+        herringbone=True,
+    )
+
+    gear2.adapt_cycloid_radii(gear1)
+
+    gear2.mesh_to(gear1, target_dir=RIGHT)
+
+    gear_part_2 = gear2.build_part()
+    gear_part_1 = gear1.build_part()
+
+    return (gear_part_1, gear_part_2)
+
+
 if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gears(), deviation=0.05, angular_tolerance=0.1)
+    show(planetary_helical_gear(), deviation=0.1, angular_tolerance=0.2)

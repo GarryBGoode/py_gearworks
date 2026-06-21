@@ -85,7 +85,7 @@ gears = Compound(
     ],
     label="gears",
 )
-
+show(gears)
 
 duration = 2
 n = duration * 30
@@ -104,8 +104,6 @@ animation.add_track("/gears/gear2", "rz", time_track, gear2_track)
 # That is why mesh_to() method needs to be called after the animation tracks are defined,
 # and applied to the Compound after creation.
 
-
-show(gears)
 
 # Start animation
 animation.animate(speed=1)

@@ -807,6 +807,14 @@ class InvoluteGear(GearInfoMixin):
     def copy(self):
         return copy.deepcopy(self)
 
+    def tip_radius_to_addendum(self, radius):
+        """Returns the appropriate addendum coefficient to achieve a given tip radius."""
+        return (radius - self.rp) / self.module - self.inputparam.profile_shift
+
+    def root_radius_to_dedendum(self, radius):
+        """Returns the appropriate dedendum coefficient to achieve a given root radius."""
+        return (self.rp - radius) / self.module + self.inputparam.profile_shift
+
 
 class SpurGear(InvoluteGear):
     """Class for a basic spur gear.
@@ -1636,6 +1644,8 @@ class CycloidGear(GearInfoMixin):
         Ratio of outside rolling circle vs pitch circle radius. Default is 0.5.
     helix_angle: float
         Helix angle of the gear in radians. Default is 0.
+    herringbone: bool, optional
+        If True, creates a double helical (herringbone) gear. Default is False
     backlash: float, optional
         Backlash coefficient. Default is 0.
     crowning: float, optional
@@ -1695,6 +1705,7 @@ class CycloidGear(GearInfoMixin):
         inside_cycloid_coefficient: float = 0.5,
         outside_cycloid_coefficient: float = 0.5,
         helix_angle: float = 0,
+        herringbone: bool = False,
         backlash: float = 0,
         crowning: float = 0,
         inside_teeth: bool = False,
@@ -1722,6 +1733,7 @@ class CycloidGear(GearInfoMixin):
         )
         self.builder: GearBuilder = None
         self.gearcore: Gear = None
+        self.herringbone = herringbone
         self.calc_params()
 
     @property
@@ -1767,6 +1779,10 @@ class CycloidGear(GearInfoMixin):
         spiral_coeff = np.tan(self.inputparam.helix_angle) / rp_ref
 
         def angle_func(z, coeff=spiral_coeff):
+            if self.herringbone:
+                zmid = (self.gearcore.z_vals[-1] + self.gearcore.z_vals[0]) / 2
+                z = z - zmid
+                z = np.abs(z)
             return z * coeff
 
         if not self.inputparam.inside_teeth:
@@ -1822,6 +1838,11 @@ class CycloidGear(GearInfoMixin):
             ),
         )
 
+        if self.herringbone:
+            zmid = (self.gearcore.z_vals[-1] + self.gearcore.z_vals[0]) / 2
+            idx_zmid = np.searchsorted(self.gearcore.z_vals, zmid)
+            self.gearcore.z_vals = np.insert(self.gearcore.z_vals, idx_zmid, zmid)
+
     def build_part(self, n_vert=None) -> Part:
         """Creates the build123d Part object of the gear. This may take several seconds.
 
@@ -1830,7 +1851,7 @@ class CycloidGear(GearInfoMixin):
         Part"""
         if n_vert is None:
             z_samples = np.linspace(
-                self.gearcore.z_vals[0], self.gearcore.z_vals[1], 20
+                self.gearcore.z_vals[0], self.gearcore.z_vals[-1], 20
             )
             angle_samples = [
                 self.gearcore.shape_recipe(z).transform.angle for z in z_samples
