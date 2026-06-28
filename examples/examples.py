@@ -29,7 +29,7 @@ def spur_gears():
     gear1 = SpurGear(
         number_of_teeth=12,
         module=2,
-        height=4,
+        height=6,
         profile_shift=0.3,
     )
     gear2 = SpurGear(
@@ -43,7 +43,9 @@ def spur_gears():
     # angle_bias conrtols location within backlash range (-1 to 1)
     # backlash is a coefficient of module
     # there will be 0.2 mm distance between inactive tooth sides in this example
-    gear1.mesh_to(gear2, target_dir=UP, backlash=0.1, angle_bias=1)
+    # axial offset is used to shift smaller gear downwards, making the alignment symmetric
+    # axial offset, just like height, is not module dependent, it is in mm.
+    gear1.mesh_to(gear2, target_dir=UP, backlash=0.1, angle_bias=1, axial_offset=-1)
 
     # generate build123d Part objects
     gear_part_1 = gear1.build_part()
@@ -52,7 +54,7 @@ def spur_gears():
     # center-bores are recommended to be added separately via build123d workflow
     # center_location_top is a build123d location object
     # multiplying with a location means placement at that location
-    hole_obj_1 = gear1.center_location_top * Hole(radius=2, depth=4)
+    hole_obj_1 = gear1.center_location_top * Hole(radius=2, depth=6)
     gear_part_1 = gear_part_1.cut(hole_obj_1)
     hole_obj_2 = gear2.center_location_top * Hole(radius=2, depth=4)
     gear_part_2 = gear_part_2.cut(hole_obj_2)
@@ -70,17 +72,22 @@ def gear_and_rack():
     rack1 = HelicalRack(
         number_of_teeth=40,
         helix_angle=PI / 6,
-        height=10,
+        height=12,
         herringbone=True,
     )
     # racks can mesh to gears, but gears can't (yet) mesh to racks
-    rack1.mesh_to(gear1, target_dir=RIGHT)
+    # axial offset used to center the rack, adjust for different heights (10 vs 12)
+    # automatic alignment of herringbone geometry is not supported yet
+    rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-1)
 
     gear2 = SpurGear(number_of_teeth=20, height=10, backlash=0.05)
     gear2.center = LEFT * 50
-    rack2 = InvoluteRack(number_of_teeth=40, height=10, backlash=0.05)
+    rack2 = InvoluteRack(number_of_teeth=40, height=14, backlash=0.05)
     # offset parameter moves the rack further along
-    rack2.mesh_to(gear2, target_dir=LEFT, offset=10, backlash=0.2, angle_bias=-1)
+    # axial offset shifts rack relative to gear's axial direction
+    rack2.mesh_to(
+        gear2, target_dir=LEFT, offset=10, backlash=0.2, angle_bias=-1, axial_offset=-2
+    )
 
     gear_part_1 = gear1.build_part()
     rack_part_1 = rack1.build_part()
@@ -137,6 +144,35 @@ def spur_gear_backlash():
         gear_part_21,
         gear_part_22,
     )
+
+
+def mesh_offsets():
+    # this example tests the mesh_to() function with different axial offsets
+    # the key question is if angular adjustment due to helix angle is correct
+
+    gear0 = HelicalGear(number_of_teeth=12, helix_angle=PI / 4, height=50, z_anchor=0.5)
+    gear1 = HelicalGear(number_of_teeth=16, helix_angle=-PI / 4, height=5, z_anchor=0.5)
+    gear2 = HelicalGear(number_of_teeth=8, helix_angle=-PI / 4, height=5, z_anchor=0.5)
+    gear3 = HelicalGear(number_of_teeth=20, helix_angle=-PI / 4, height=5, z_anchor=0.5)
+    gear4 = HelicalRingGear(
+        number_of_teeth=50, helix_angle=PI / 4, height=5, z_anchor=0.5
+    )
+
+    gear1.mesh_to(
+        gear0, target_dir=LEFT, axial_offset=-25 + 2.5, backlash=0.1, angle_bias=-1
+    )
+    gear2.mesh_to(gear0, target_dir=RIGHT, axial_offset=5, backlash=0.1, angle_bias=-1)
+    gear3.mesh_to(gear0, target_dir=UP, axial_offset=20, backlash=0.1, angle_bias=-1)
+    gear4.mesh_to(
+        gear0, target_dir=RIGHT, axial_offset=-25 + 2.5, backlash=0.1, angle_bias=-1
+    )
+
+    gear_part_0 = gear0.build_part()
+    gear_part_1 = gear1.build_part()
+    gear_part_2 = gear2.build_part()
+    gear_part_3 = gear3.build_part()
+    gear_part_4 = gear4.build_part()
+    return [gear_part_0, gear_part_1, gear_part_2, gear_part_3, gear_part_4]
 
 
 def helical_gears():
@@ -440,7 +476,7 @@ def cycloid_drive():
     n = 17
     diff = 1
     beta = 3 * PI / 8 * 1
-    h = 10
+    h = 30
     c1 = 1 / 2 / (n - diff)
     c2 = 1 / 2 / (n)
     gear1 = CycloidGear(
@@ -524,4 +560,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(planetary_helical_gear(), deviation=0.1, angular_tolerance=0.2)
+    show(spur_gears(), deviation=0.1, angular_tolerance=0.2)

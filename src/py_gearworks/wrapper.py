@@ -255,6 +255,17 @@ class GearInfoMixin:
     def p2z(self, prop):
         return self.proportion_to_z(prop)
 
+    def offset_to_z(self, offset):
+        """Returns the z-value of a gear-slice at a given offset from the reference
+        center of the gear."""
+        res = root(
+            lambda z: self.gearcore.shape_recipe(z).transform.center[2]
+            * self.gearcore.transform.scale
+            - offset,
+            0,
+        )
+        return res.x[0]
+
     @property
     def addendum_radius(self):
         """Nominal addendum radius of the gear, after calculating all modifiers."""
@@ -691,6 +702,7 @@ class InvoluteGear(GearInfoMixin):
         target_dir: np.ndarray = RIGHT,
         backlash: float = None,
         angle_bias: float = 0.0,
+        axial_offset: float = 0.0,
     ):
         """Aligns this gear to another gear object.
         Parameters
@@ -709,6 +721,10 @@ class InvoluteGear(GearInfoMixin):
             Angle bias to apply within the backlash. 1 shifts the gear in the positive
             direction until it makes contact. -1 shifts in the negative direction,
             0 places it in the middle. Default is 0.0.
+        axial_offset: float, optional
+            Shift of this gear relative to the anchor point, in mm (not unit of module).
+            Only applies to parallel axis gears (spur, helical).
+            Default is 0.0.
         """
         if backlash is None:
             backlash = self.inputparam.backlash + other.inputparam.backlash
@@ -745,7 +761,13 @@ class InvoluteGear(GearInfoMixin):
                 self.inputparam.pressure_angle
             )
         else:
-            if np.abs(self.beta + other.beta) > 1e-6:
+            if (
+                (not (self.inside_teeth or other.inside_teeth))
+                and np.abs(self.beta + other.beta) > 1e-6
+            ) or (
+                (self.inside_teeth or other.inside_teeth)
+                and np.abs(self.beta - other.beta) > 1e-6
+            ):
                 distance = calc_nominal_mesh_distance(
                     self.rp,
                     other.rp,
@@ -766,8 +788,16 @@ class InvoluteGear(GearInfoMixin):
                     backlash=backlash_act,
                 )
             v0 = target_dir * distance + other.gearcore.transform.center
-            self.gearcore.transform.center = v0
+            v1 = other.gearcore.transform.z_axis * axial_offset
+            self.gearcore.transform.center = v0 + v1
             self.gearcore.transform.orientation = other.gearcore.transform.orientation
+            angle_offset_other = other.gearcore.shape_recipe(
+                other.offset_to_z(axial_offset)
+            ).transform.angle
+            angle_offset = angle_offset_other / self.rp * other.rp
+            if self.inputparam.inside_teeth or other.inputparam.inside_teeth:
+                angle_offset = -angle_offset
+
             self.gearcore.transform.angle = (
                 calc_mesh_angle(
                     self.gearcore.transform,
@@ -778,6 +808,7 @@ class InvoluteGear(GearInfoMixin):
                     gear2_inside_ring=other.inside_teeth,
                 )
                 + angle_bias / 2 * backlash_act / self.r_base
+                - angle_offset
             )
 
     def reset_location(self):
@@ -1237,10 +1268,15 @@ class HelicalGear(InvoluteGear):
         return self.helix_angle
 
     def mesh_to(
-        self, other, target_dir=RIGHT, backlash: float = None, angle_bias: float = 0.0
+        self,
+        other,
+        target_dir=RIGHT,
+        backlash: float = None,
+        angle_bias: float = 0.0,
+        axial_offset: float = 0.0,
     ):
         # basic meshing
-        super().mesh_to(other, target_dir, backlash, angle_bias)
+        super().mesh_to(other, target_dir, backlash, angle_bias, axial_offset)
         # orientation correction
         rot_axis = normalize_vector(other.gearcore.center - self.gearcore.center)
         angle_axis = self.beta + other.beta
@@ -1888,7 +1924,12 @@ class CycloidGear(GearInfoMixin):
         )
         return self.builder.part_transformed
 
-    def mesh_to(self, other: "CycloidGear", target_dir: np.ndarray = RIGHT):
+    def mesh_to(
+        self,
+        other: "CycloidGear",
+        target_dir: np.ndarray = RIGHT,
+        axial_offset: float = 0.0,
+    ):
         """Aligns this gear to another gear object.
 
         Arguments
@@ -1899,6 +1940,10 @@ class CycloidGear(GearInfoMixin):
             The direction in which the gear should be placed in relation to the other
             gear.
             Should be a unit vector. Default is RIGHT (x).
+        axial_offset: float
+            Axial offset to apply to the gear along the target_dir.
+            Only applies if cone angle = 0.
+            Default is 0.
         """
         if self.cone_angle != 0 or other.cone_angle != 0:
             v0 = calc_bevel_gear_placement_vector(
@@ -1933,7 +1978,8 @@ class CycloidGear(GearInfoMixin):
             else:
                 distance = self.pitch_radius + other.pitch_radius
             v0 = target_dir * distance + other.gearcore.transform.center
-            self.gearcore.transform.center = v0
+            v1 = other.gearcore.transform.z_axis * axial_offset
+            self.gearcore.transform.center = v0 + v1
             self.gearcore.transform.orientation = other.gearcore.transform.orientation
             self.gearcore.transform.angle = calc_mesh_angle(
                 self.gearcore.transform,
@@ -2493,6 +2539,7 @@ class InvoluteRack:
         offset: float = 0,
         backlash: float = None,
         angle_bias: float = 0,
+        axial_offset: float = 0,
     ):
         """Aligns this rack to a gear object.
 
@@ -2514,6 +2561,8 @@ class InvoluteRack:
             Offset to be used inside backlash. This is a linear shift, but named angle
             to becompatible with gear meshing. Value 1 shifts completely to the right,
             -1 to the left within the backlash play. Default is 0.
+        axial_offset: float
+            Axial offset of the rack in the gear's axial direction. Default is 0.
         """
         #
         # mult from right: vector in gear's coordinate orientation
@@ -2540,11 +2589,19 @@ class InvoluteRack:
             * gear.module
             / (2 * np.sin(self.pressure_angle))
         )
+
+        axial_vector = gear.gearcore.transform.z_axis * axial_offset
+        other_angle_offset = gear.gearcore.shape_recipe(
+            gear.offset_to_z(axial_offset)
+        ).transform.angle
+
         # Shift adjustment due to angle bias needs correction from total backlash
         shift_adjust = (
             angle_bias * backlash * gear.module / (2 * np.cos(self.pressure_angle))
+            + np.tan(gear.beta) * other_angle_offset * gear.pitch_radius
         )
         target_dir_norm = np.cross(gear.gearcore.transform.z_axis, target_dir_proj)
+
         self.position = (
             gear.gearcore.transform.center
             + target_dir_proj
@@ -2554,6 +2611,7 @@ class InvoluteRack:
                 + backlash_adjust
             )
             + target_dir_norm * shift_adjust
+            + axial_vector
         )
 
 
