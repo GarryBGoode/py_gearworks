@@ -29,8 +29,8 @@ Docs hosted on [readthedocs](https://gggears.readthedocs.io/en/latest/)
 | Spur              | Undercut          | Std. position                         |
 | Helical           | Profile shift     | Backlash-controlled position*         |
 | Bevel             | Root/tip fillet   | Axis alignment (bevels and helicals)  |
-| Cycloid           | Crowning          | Geartooth alignment to mesh           |
-| Inside-ring          
+| Cycloid           | Crowning          | Rotation to align teeth to mesh       |
+| Inside-ring       |                   | Axial offset (only spur and helical)
 
 It is a development goal that all (sensible) combination of supported features should be combined.
 Profile shifted cycloids don't exist, but inside-ring-bevel cycloids can be made. Undercut and profile shift is available for bevels - but positioning of profile shifted bevels is lacking. Please use complementary profile shifts for bevels.
