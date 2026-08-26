@@ -38,7 +38,7 @@ jobs:
           path: ./wheelhouse/py_gearworks*.* # store the py_gearworks wheel and sdist
 
   upload_pypi:
-    needs: [build_wheel]
+    needs: [build_wheel_sdist]
     runs-on: ubuntu-latest
     environment:
       name: testpypi #TODO: update to "pypi"
