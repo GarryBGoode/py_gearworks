@@ -17,6 +17,7 @@ output.txt
 *.egg-info/
 build/
 src/py_gearworks/_version.py
+*.tar.gz
 
 # Environments
 .env
@@ -26,3 +27,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Docs
+docs/_build/
