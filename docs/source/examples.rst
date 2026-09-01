@@ -1,6 +1,5 @@
-########
-Examples
-########
+Basic Examples
+===================
 
 The examples on this page showcase the available functionality of py_gearworks package and help learning the workflow.
 

@@ -2,9 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*_cache/
 
 # manual and local test files
 mytest.py
+*.step
 
 # local logging and stuff
 output.txt
@@ -17,6 +19,7 @@ output.txt
 *.egg-info/
 build/
 src/py_gearworks/_version.py
+*.tar.gz
 
 # Environments
 .env
@@ -26,3 +29,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Docs
+docs/_build/

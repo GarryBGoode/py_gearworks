@@ -1,3 +1,15 @@
+# Copyright 2026 Gergely Bencsik
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import py_gearworks as pgw
 from build123d import *
 from ocp_vscode import *
@@ -124,7 +136,12 @@ dedendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_d_curve)
 base_circle_1 = pgw.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
 base_circle_2 = pgw.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
 
-loa1, loa2 = pgw.LineOfAction(gear2, gear1, z_ratio=1).LOA_gen()
+# generate lines of contact for the gear pair, and convert to b123d curves for display
+# note: pgw.generate_line_of_action() exists, it traces line of action
+#  from base circle to base circle
+# pgw.generate_line_of_contact() trims line of action to the set of points that are in
+#  contact with the gear teeth, and returns the trimmed lines of action
+loa1, loa2 = pgw.generate_line_of_contact(gear2, gear1, z_level=1)
 line_of_action_1 = pgw.line_to_b123d(loa1)
 line_of_action_2 = pgw.line_to_b123d(loa2)
 
@@ -209,6 +226,8 @@ with BuildPart() as housing_top:
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
 housing_top.part.label = "housing_top"
+
+# necessary collector for animation
 anim_collector = Compound(
     children=(
         [
@@ -226,13 +245,23 @@ anim_collector = Compound(
     label="assembly",
 )
 
+# display the assembly and animate the gears
+show(anim_collector)
+
+
+# animation setup
+# seconds of animation
 duration = 2
+# 30 frames per second
 n = duration * 30
 time_track = np.linspace(0, duration, n + 1)
+# gear rotation tracks, using pitch angle to get the correct rotation
+# animation will shift 1 pitch per second, forming a perfect animation loop
+# animation rotation 'rz' needs degrees, so convert from radians to degrees
 gear1_track = np.linspace(0, gear1.pitch_angle * 180 / np.pi, n + 1) * duration
 gear2_track = np.linspace(0, gear2.pitch_angle * 180 / np.pi, n + 1) * duration
 animation1 = Animation(anim_collector)
 animation1.add_track("/assembly/gear1", "rz", time_track, gear1_track)
 animation1.add_track("/assembly/gear2", "rz", time_track, gear2_track)
-show(anim_collector)
+
 animation1.animate(speed=1)

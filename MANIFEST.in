@@ -1,0 +1,3 @@
+prune docs/build
+prune misc
+prune gui

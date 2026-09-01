@@ -1,4 +1,4 @@
-# Copyright 2024 Gergely Bencsik
+# Copyright 2026 Gergely Bencsik
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -2239,10 +2239,20 @@ def generate_line_of_contact(
         sol0 = minimize(
             lambda t: np.linalg.norm(line_curve(guess[0]) - circle_curve(t)), x0=0
         )
+        if not sol0.success:
+            # try again
+            sol0 = minimize(
+                lambda t: np.linalg.norm(line_curve(guess[0]) - circle_curve(t)),
+                x0=0.25,
+            )
+        sol1 = minimize(
+            lambda t: np.linalg.norm(line_curve(t) - circle_curve(sol0.x[0])),
+            x0=guess[0],
+        )
         sol = find_curve_intersect(
             circle_curve,
             line_curve,
-            guess=[sol0.x[0], guess[0]],
+            guess=[sol0.x[0], sol1.x[0]],
             method=IntersectMethod.MINDISTANCE,
         )
         return sol.x[1]
@@ -2257,17 +2267,11 @@ def generate_line_of_contact(
 
     trim_points = [points[point_idx_2], points[point_idx_1]]
 
-    # curve1 = crv.LineCurve(p0=loa1(trim_points[0]), p1=loa1(trim_points[1]))
-    # curve2 = crv.LineCurve(p0=loa2(trim_points[0]), p1=loa2(trim_points[1]))
     curve1 = loa1.copy()
     curve1.set_start_and_end_on(trim_points[0], trim_points[1])
-    diff_vector = gear2.center_point_at_z(z_level) - gear1.center_point_at_z(z_level)
-    diff_vector_unit = diff_vector / np.linalg.norm(diff_vector)
-    mirror_v = np.cross(gear1.cone_data.transform.z_axis, diff_vector_unit)
-    mirror_v = mirror_v / np.linalg.norm(mirror_v)
-    curve2 = MirroredCurve(
-        curve1.copy(), plane_normal=mirror_v, center=gear2.center_point_at_z(z_level)
-    )
+    curve2 = loa2.copy()
+    curve2.set_start_and_end_on(trim_points[0], trim_points[1])
+
     return curve1, curve2
 
 

@@ -6,6 +6,7 @@
 # -- Path setup --------------------------------------------------------------
 import os
 import sys
+from importlib.metadata import PackageNotFoundError, version as _get_version
 
 sys.path.insert(0, os.path.abspath("../../src"))
 sys.path.insert(0, os.path.abspath("../../src/py_gearworks"))
@@ -15,10 +16,16 @@ sys.path.insert(0, os.path.abspath("../../src/py_gearworks"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "py_gearworks"
-copyright = "2024, Gergely Bencsik"
+copyright = "2026, Gergely Bencsik"
 author = "Gergely Bencsik"
-release = "0.1"
-version = "0.1.0"
+
+try:
+    # Full version string, e.g. "0.1.0" or "0.1.1.dev3+g1a2b3c4"
+    release = _get_version("py_gearworks")
+except PackageNotFoundError:
+    release = "0.0.0"
+# Short X.Y version
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -63,3 +70,7 @@ napoleon_numpy_docstring = True
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+
+html_theme_options = {
+    "navigation_depth": 6,
+}

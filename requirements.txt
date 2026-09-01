@@ -1,11 +1,1 @@
-numpy>=2.0.0
-scipy>=1.10.1
-build123d>=0.9.1
-cadquery-ocp
-pytest
-pytest-xdist
-shapely
-matplotlib
-ocp-vscode
-pyqt6
-PyQt6-WebEngine
+-e .[all]

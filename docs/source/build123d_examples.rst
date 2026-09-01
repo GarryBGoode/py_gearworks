@@ -1,5 +1,11 @@
-Build123d Workflow Examples
+Detailed Workflow Examples
 ===========================
+
+The following examples demonstrate complete mini-projects using py_gearworks along with `build123d <https://github.com/gumyr/build123d>`_. 
+The examples are available in the `examples` folder of the repository.
+
+These examples were developed in Visual Studio Code, with the `OCP CAD Viewer <https://marketplace.visualstudio.com/items?itemName=bernhard-42.ocp-cad-viewer>`_ extension for visualization. 
+The examples can be run in any Python environment, but the OCP CAD Viewer (and ocp_vscode python package) is necessary for the `show()` and `animate()` methods to work.
 
 Simple gears on a backplate
 ----------------------------
@@ -35,9 +41,9 @@ but showcases the gear generator and its helper functions for build-123d workflo
 
 Highlights:
 
-* You can use `center_location_bottom` and `center_location_top` to align parts with gear centers.
+* You can use `center_location_bottom` and `center_location_top` to align build123d parts with gear centers.
 * The :py:attr:`radii_data_top <py_gearworks.wrapper.GearInfoMixin.radii_data_top>` method generates reference curves for the gear.
-* The :py:class:`LineOfAction <py_gearworks.wrapper.GearInfoMixin.LineOfAction>` class is available for generating the line of action between gears.
+* The :py:func:`generate_line_of_contact() <py_gearworks.wrapper.generate_line_of_contact>` function is available for generating the line of contact between gears.
 * Sometimes converter functions are needed such as :py:func:`arc_to_b123d() <py_gearworks.conv_build123d.arc_to_b123d>` and :py:func:`line_to_b123d() <py_gearworks.conv_build123d.line_to_b123d>`. These convert between py_gearworks' own geometry classes and build123d geometry.
 * Animation is used from `ocp_vscode` to visualize the gear meshing. Animation can be non-intuitive, but explaining it is beyond this example.
 

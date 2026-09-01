@@ -5,12 +5,18 @@ description = "A gear geometry generator in Python"
 authors = [
 { name = "Gergely Bencsik", email = "bencsik.gergely.1@gmail.com"},
 ]
+license = { file = "LICENSE" }
 readme="README.md"
 requires-python = ">=3.10"
 classifiers = [
 "Programming Language :: Python :: 3",
-"License :: OSI Approved :: Apache-2.0",
+"License :: OSI Approved :: Apache Software License",
 "Operating System :: OS Independent",
+"Development Status :: 3 - Alpha",
+ "Intended Audience :: Manufacturing",
+ "Intended Audience :: Developers",
+ "Intended Audience :: Science/Research",
+ "Topic :: Scientific/Engineering",
 ]
 keywords = ["gears", "CAD", "python"]
 
@@ -21,8 +27,11 @@ dependencies = [
 ]
 
 
-[project_urls]
+[project.urls]
 Homepage = "https://github.com/GarryBGoode/py_gearworks"
+Documentation = "https://py-gearworks.readthedocs.io/en/latest/"
+Repository = "https://github.com/GarryBGoode/py_gearworks"
+Issues = "https://github.com/GarryBGoode/py_gearworks/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -41,6 +50,11 @@ extras = [
     "matplotlib",
     "pyqt6",
     "PyQt6-WebEngine",
+]
+
+docs = [
+    "sphinx",
+    "sphinx_rtd_theme",
 ]
 
 all = [

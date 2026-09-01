@@ -1,4 +1,4 @@
-# Copyright 2024 Gergely Bencsik
+# Copyright 2026 Gergely Bencsik
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,19 +16,31 @@ from scipy.special import comb
 
 
 def rotate_vector(v, angle):
+    """
+    Rotate a vector v by a given angle around the Z-axis.
+    """
     rot1 = scp_Rotation.from_euler("z", angles=angle)
     return rot1.apply(v)
 
 
 def normalize_vector(v):
+    """
+    Normalize a vector v.
+    """
     return v / np.linalg.norm(v)
 
 
 def angle_between_vectors(v1, v2):
+    """
+    Calculate the angle between two vectors v1 and v2.
+    """
     return np.arctan2(np.linalg.norm(np.cross(v1, v2)), np.dot(v1, v2))
 
 
 def angle_between_vector_and_plane(v, plane_normal):
+    """
+    Calculate the angle between a vector v and a plane defined by its normal vector plane_normal.
+    """
     v_plane = v - np.dot(v, plane_normal) * plane_normal
     if np.linalg.norm(v_plane) == 0:
         return PI / 2
@@ -37,10 +49,16 @@ def angle_between_vector_and_plane(v, plane_normal):
 
 
 def project_vector_to_plane(v, plane_normal):
+    """
+    Project a vector v onto a plane defined by its normal vector plane_normal.
+    """
     return v - np.dot(v, plane_normal) * plane_normal
 
 
 def project_point_to_line(p, line_point, line_dir):
+    """
+    Project a point p onto a line defined by a point line_point and direction line_dir.
+    """
     line_dir_norm = normalize_vector(line_dir)
     v = p - line_point
     d = np.dot(v, line_dir_norm)
@@ -48,6 +66,9 @@ def project_point_to_line(p, line_point, line_dir):
 
 
 def angle_of_vector_in_xy(v):
+    """
+    Calculate the angle of a vector v in the XY plane.
+    """
     return np.arctan2(v[1], v[0])
 
 
@@ -374,6 +395,7 @@ def interpolate(x, x0, x1, y0, y1):
 
 
 def nurbezier(t, points, weights):
+    """Non-uniform rational bezier curve evaluation at parameter t."""
     n = points.shape[0]
     point2 = points * weights.reshape(n, 1)
     if hasattr(t, "__iter__"):
@@ -533,6 +555,8 @@ def nurbezier_surface_2(u, v, points, weights):
 
 
 def calc_nurbezier_arc(p0, p2, center):
+    """Returns points and weights of a quadratic non-uniform bezier segment representing
+    an arc of a circle defined by the points p0, p2, and the center."""
     pmid = (p0 + p2) / 2
     h_angle = angle_between_vectors(p0 - center, p2 - center) / 2
     # p0 and p2 should be on the same radius, but adding little numeric redundancy here with the average
@@ -549,6 +573,8 @@ def calc_nurbezier_arc(p0, p2, center):
 
 
 def calc_quadratic_bezier_interp(p0, p1, p2):
+    """Returns the control points of a quadratic bezier curve that interpolates the
+    points p0, p1, p2 at t=0, t=0.5, t=1 respectively."""
     return np.array([p0, (4 * p1 - p0 - p2), p2])
 
 
@@ -634,6 +660,11 @@ def octoid(
     v_offs=ORIGIN,
     z_offs=0.0,
 ):
+    """
+    Return the point of the octoidal bevel gear tooth flank for a given rolling parameter t.
+    The point is calculated based on the octoidal involute geometry, taking into account
+    the base radius, sphere radius, pressure angle, and rotation angle.
+    """
     # taken from Giorgio Figliolini:
     # Algorithms for Involute and Octoidal Bevel-Gear Generation
     # DOI: 10.1115/1.1900147
@@ -699,6 +730,12 @@ def octoid_contact(
     v_offs=ORIGIN,
     z_offs=0.0,
 ):
+    """
+    Return the contact point of the octoidal bevel gear tooth flank for a given rolling
+    parameter t. The contact point is calculated based on the octoidal involute geometry,
+    taking into account the base radius, sphere radius, pressure angle, and rotation
+    angle.
+    """
     # taken from Giorgio Figliolini:
     # Algorithms for Involute and Octoidal Bevel-Gear Generation
     # DOI: 10.1115/1.1900147

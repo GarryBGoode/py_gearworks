@@ -1,4 +1,4 @@
-# Copyright 2024 Gergely Bencsik
+# Copyright 2026 Gergely Bencsik
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,11 +10,17 @@
 # limitations under the License.
 
 import py_gearworks.wrapper as pgw
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import doctest
 import sys
 import os
+import glob
+import runpy
 import inspect
+
+import pytest
 
 
 def test_example():
@@ -37,6 +43,28 @@ def test_example():
     for func in example_functions:
         print(f"Running {func.__name__}...")
         func()
+
+def _example_scripts():
+    """Return all standalone example scripts, excluding examples.py which is
+    exercised by test_example above."""
+    examples_dir = os.path.join(os.path.dirname(__file__), "..", "examples")
+    scripts = sorted(glob.glob(os.path.join(examples_dir, "*.py")))
+    return [s for s in scripts if os.path.basename(s) != "examples.py"]
+
+
+@pytest.mark.parametrize(
+    "script", _example_scripts(), ids=lambda s: os.path.basename(s)
+)
+def test_example_2(script):
+    """Every script under examples/ (except examples.py) must run without error."""
+    cwd = os.getcwd()
+    try:
+        os.chdir(os.path.dirname(script))
+        runpy.run_path(script, run_name="__main__")
+    finally:
+        os.chdir(cwd)
+        plt.close("all")
+
 
 
 def test_doctest():
