@@ -2,6 +2,7 @@ Documentation
 =================
 
 Py_gearworks documentation uses Sphinx and the Read the Docs theme.
+
 Building the documentation
 --------------------------
 
