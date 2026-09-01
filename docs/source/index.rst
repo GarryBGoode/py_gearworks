@@ -1,19 +1,14 @@
-.. py_gearworks documentation master file, created by
-   sphinx-quickstart on Tue Nov 19 11:06:17 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to py_gearworks's documentation!
-===================================
+========================================
 
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
 
    intro
-   examples
-   build123d_examples
-   py_gearworks
+   install
+   examples_lander
+   api
    
 
 

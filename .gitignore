@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*_cache/
 
 # manual and local test files
 mytest.py
