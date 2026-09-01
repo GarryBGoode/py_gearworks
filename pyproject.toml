@@ -15,7 +15,7 @@ classifiers = [
 "Development Status :: 3 - Alpha",
  "Intended Audience :: Manufacturing",
  "Intended Audience :: Developers",
- "Intended Audience :: Engineers",
+ "Intended Audience :: Science/Research",
  "Topic :: Scientific/Engineering",
 ]
 keywords = ["gears", "CAD", "python"]
@@ -29,7 +29,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/GarryBGoode/py_gearworks"
-Documentation = "https://gggears.readthedocs.io/en/latest/"
+Documentation = "https://py-gearworks.readthedocs.io/en/latest/"
 Repository = "https://github.com/GarryBGoode/py_gearworks"
 Issues = "https://github.com/GarryBGoode/py_gearworks/issues"
 
