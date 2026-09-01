@@ -52,6 +52,11 @@ extras = [
     "PyQt6-WebEngine",
 ]
 
+docs = [
+    "sphinx",
+    "sphinx_rtd_theme",
+]
+
 all = [
     "py_gearworks[dev]",
     "py_gearworks[ocp_vscode]",

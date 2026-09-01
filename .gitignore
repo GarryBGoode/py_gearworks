@@ -6,6 +6,7 @@ __pycache__/
 
 # manual and local test files
 mytest.py
+*.step
 
 # local logging and stuff
 output.txt
