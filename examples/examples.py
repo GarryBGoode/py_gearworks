@@ -239,9 +239,7 @@ def planetary_helical_gear():
     angle_correction = PI / n_ring * ((n_planet + 1) % 2)
 
     gearset = PlanetaryGearset(n_sun, n_ring, n_planet, 1)
-    gearset.num_planets = gearset.max_num_planets_corrected(
-        addendum_ratio=1.1 + shift_planet
-    )
+    gearset.num_planets = gearset.max_num_planets(addendum_ratio=1.1 + shift_planet)
 
     gear_ring = HelicalRingGear(
         number_of_teeth=n_ring,

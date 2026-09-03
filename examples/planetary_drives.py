@@ -17,10 +17,16 @@ from build123d import *
 from scipy.spatial.transform import Rotation as scp_Rotation
 from scipy.optimize import minimize
 
-n_ring = 105
-n_sun = 43
+# This example is a bit of a playground for testing planetary gears.
+# The goal is to create a set with any number of teeth on the sun and ring
+# and insert appropriate number of planets.
+# Also there's profile shifts.
 
-shift_tooth = np.mod(n_ring - n_sun, 2) * 0.5 - 0
+
+n_ring = 115
+n_sun = 11
+
+shift_tooth = np.mod(n_ring - n_sun, 2) * 0.5 - 1
 shift_sun = 0.15
 shift_ring = -0.0
 n_planet = int(np.floor((n_ring - n_sun) / 2 + shift_tooth))
@@ -33,9 +39,7 @@ drill_hole_dia = 3
 
 
 gearset = PlanetaryGearset(n_sun, n_ring, n_planet, 1)
-gearset.num_planets = gearset.max_num_planets_corrected(
-    addendum_ratio=1.1 + shift_planet
-)
+gearset.num_planets = gearset.max_num_planets(addendum_ratio=1.1 + shift_planet)
 
 gear_sun = SpurGear(
     number_of_teeth=n_sun, height=height, profile_shift=shift_sun, backlash=backlash

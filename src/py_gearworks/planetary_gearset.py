@@ -20,6 +20,15 @@ import numpy as np
 
 @dataclass
 class PlanetaryRotations:
+    """Angular velocities for all members of a planetary gearset.
+
+    Attributes
+    ----------
+    ring, carry, sun, planet : float
+        Angular velocity of the corresponding gearset member. Units are inherited
+        from the input speed used to calculate the result.
+    """
+
     ring: float
     carry: float
     sun: float
@@ -27,6 +36,8 @@ class PlanetaryRotations:
 
 
 class PlanetaryGearType(Enum):
+    """Selectable members of a planetary gearset."""
+
     SUN = 1
     PLANET = 2
     RING = 3
@@ -43,15 +54,28 @@ class PlanetaryGearset:
     """
 
     def __init__(self, n_sun, n_ring, n_planet, num_planets):
-        """Initializes a planetary gearset with the given number of teeth for the sun,
-        ring, and planet gears, as well as the number of planets."""
+        """Initialize a planetary gearset.
+
+        Parameters
+        ----------
+        n_sun, n_ring, n_planet : int
+            Tooth counts of the sun, ring, and each planet gear.
+        num_planets : int
+            Number of planet gears in the assembly.
+        """
         self.n_sun = n_sun
         self.n_ring = n_ring
         self.n_planet = n_planet
         self.num_planets = num_planets
 
     def get_planet_position_angles(self):
-        """Returns all suitable angular positions (in radians) for the planets, given sun and ring gear sizes."""
+        """Return tooth-aligned candidate planet positions in radians.
+
+        Returns
+        -------
+        np.ndarray
+            Equally spaced angles for the ``n_sun + n_ring`` valid tooth phases.
+        """
         # w_ring * n_ring = w_carry * (n_ring + n_sun) - w_sun * n_sun
         # 1 tooth up for ring, sun is stationary
         # w_ring = 2pi=   w_carry * (n_ring + n_sun)
@@ -63,26 +87,34 @@ class PlanetaryGearset:
         return angles
 
     def min_sun_ratio_from_planets(self):
-        """
-        Returns the minimum size of the sun gear relative to the ring gear, given the number of planets.
-        This is derived from the fact that planets must fit next to each other. Geometrically modeled with touching circles,
-        the minimum sun gear size for 1 and 2 planets is 0, for 3 planets it is 0.071, 4 planets give 0.172, and so on.
-        Note that this only holds for pitch circles, actual sun gear size need to be larger and planets slightly smaller to fit.
+        """Return the minimum sun-to-ring pitch-radius ratio for planet clearance.
+
+        The result models adjacent planet pitch circles as touching. It is a
+        geometric lower bound; addenda and tooth clearance require additional
+        design margin.
+
+        Returns
+        -------
+        float
+            Minimum allowable ratio of sun pitch radius to ring pitch radius.
         """
 
         R_poly = np.sin(np.pi / self.num_planets)
         R_sun = (1 - R_poly) / (1 + R_poly)
         return R_sun
 
-    def max_num_planets(self):
-        """Returns the maximum number of planets that can fit between the sun and ring gear, given their sizes."""
-        R_poly = (1 - self.n_sun / self.n_ring) / (1 + self.n_sun / self.n_ring)
-        num_planets = np.pi / np.arcsin(R_poly)
-        return int(np.floor(num_planets))
+    def max_num_planets(self, addendum_ratio=1.0):
+        """Return the maximum evenly spaced planets that fit within the gearset.
 
-    def max_num_planets_corrected(self, addendum_ratio=1.1):
-        """Returns the maximum number of planets that can fit between the sun and ring gear,
-        corrected for the difference between planet outer diameter and pitch diameter.
+        Parameters
+        ----------
+        addendum_ratio : float, default=1.0
+            Addendum height relative to the module used for planet clearance.
+
+        Returns
+        -------
+        int
+            Largest whole number of evenly distributed planet gears that fit.
         """
         R_poly = (self.n_planet * 2) / (self.n_ring + self.n_sun)
         R_poly *= (self.n_planet + addendum_ratio * 2) / self.n_planet
@@ -90,8 +122,11 @@ class PlanetaryGearset:
         return int(np.floor(num_planets))
 
     def get_planet_angles_distributed(self):
-        """Returns the angles of the planets distributed evenly around the sun gear,
-        given the number of planets."""
+        """
+        Returns the angles of the planets distributed (close to) evenly around the sun
+        gear, given the number of planets. If even distribution is not possible, the
+        closest possible valid distribution is returned. The angles are in radians.
+        """
         angles_normalized = self.get_planet_position_angles() / np.pi / 2
         pos_ref = np.linspace(0, 1, self.num_planets, endpoint=False)
         increment = angles_normalized[1] - angles_normalized[0]
@@ -111,8 +146,27 @@ class PlanetaryGearset:
     def get_ratio(
         self, w=1, driven=PlanetaryGearType.SUN, stationary=PlanetaryGearType.CARRY
     ):
-        """Returns the transmission ratios in PlanetaryRotations object for all gears in
-        the planetary set, given the case described by the parameters."""
+        """Calculate member velocities from a driven and stationary gearset member.
+
+        Parameters
+        ----------
+        w : float, default=1
+            Angular velocity assigned to ``driven``.
+        driven : PlanetaryGearType, default=PlanetaryGearType.SUN
+            Gearset member supplied with the input velocity.
+        stationary : PlanetaryGearType, default=PlanetaryGearType.CARRY
+            Gearset member held at zero velocity. It must differ from ``driven``.
+
+        Returns
+        -------
+        PlanetaryRotations
+            Angular velocities of the sun, ring, carrier, and planet members.
+
+        Raises
+        ------
+        ValueError
+            If the driven/stationary combination is not supported.
+        """
         if driven == PlanetaryGearType.SUN:
             if stationary == PlanetaryGearType.CARRY:
                 w_sun = w
