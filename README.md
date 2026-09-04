@@ -101,6 +101,16 @@ gear_part_2 = gear_part_2.cut(hole_obj_2)
 export_step(gear_part_1, "gear1.step")
 export_step(gear_part_2, "gear2.step")
 
+# export to DXF files (build123d export function)
+gear_wire_1 = gear1.build_boundary_wire()
+gear_wire_2 = gear2.build_boundary_wire()
+
+exporter = ExportDXF(unit=Unit.MM, line_weight=0.5)
+exporter.add_layer("Layer 1", line_type=LineType.CONTINUOUS)
+exporter.add_shape(gear_wire_1, layer="Layer 1")
+exporter.add_shape(gear_wire_2, layer="Layer 1")
+exporter.write("gears.dxf")
+
 # visualize parts
 show(gear_part_1, gear_part_2)
 ```
