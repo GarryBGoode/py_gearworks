@@ -2355,8 +2355,14 @@ def generate_line_of_contact(
 
     curve1 = loa1.copy()
     curve1.set_start_and_end_on(trim_points[0], trim_points[1])
-    curve2 = loa2.copy()
-    curve2.set_start_and_end_on(trim_points[0], trim_points[1])
+
+    if isinstance(loa2, MirroredCurve):
+        curve2 = MirroredCurve(
+            curve1, plane_normal=loa2.plane_normal, center=loa2.center
+        )
+    else:
+        curve2 = loa2.copy()
+        curve2.set_start_and_end_on(trim_points[0], trim_points[1])
 
     return curve1, curve2
 
