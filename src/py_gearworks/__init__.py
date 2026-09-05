@@ -7,7 +7,7 @@ from py_gearworks.core import *
 from py_gearworks.conv_build123d import *
 from py_gearworks.wrapper import *
 from py_gearworks.gearmath import *
-
+from py_gearworks.planetary_gearset import *
 
 try:
     __version__ = version("py_gearworks")

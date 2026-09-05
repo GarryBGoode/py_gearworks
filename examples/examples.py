@@ -215,16 +215,31 @@ def worm_approx():
 def planetary_helical_gear():
     m = 2
 
-    n_ring = 97
-    n_sun = 11
-    n_planet = int(np.floor((n_ring - n_sun) / 2))
+    # this example is for playing around with planetary gearsets
+    # PlanetaryGearset class can adjust positioning of planets for any tooth number
+    # due to involute geometry, profile shifting is possible to some extent,
+    # and the number of teeth on planets don't necessarily need to align with radius constraints
 
+    n_ring = 105
+    n_sun = 10
+
+    # total profile shifts have to follow:
+    # shift_sun + 2*shift_planet - shift_ring = -shift_tooth
+    # e.g. shift_tooth = -1 means 1 planet is 1 tooth smaller which needs to be covered by profile shifts
+    shift_tooth = np.mod(n_ring - n_sun, 2) * 0.5 - 2
+    shift_sun = 0.5
+    shift_ring = -0.3
+    n_planet = int(np.floor((n_ring - n_sun) / 2 + shift_tooth))
+    shift_planet = (-shift_tooth - shift_sun + shift_ring) / 2
     beta = 15 * PI / 180
-    herringbone = True
+    herringbone = False
 
     height = 15
     # this hacky correction needs a better treatment later
     angle_correction = PI / n_ring * ((n_planet + 1) % 2)
+
+    gearset = PlanetaryGearset(n_sun, n_ring, n_planet, 1)
+    gearset.num_planets = gearset.max_num_planets(addendum_ratio=1.1 + shift_planet)
 
     gear_ring = HelicalRingGear(
         number_of_teeth=n_ring,
@@ -233,6 +248,7 @@ def planetary_helical_gear():
         helix_angle=beta,
         angle=angle_correction,
         herringbone=herringbone,
+        profile_shift=shift_ring,
     )
     gear_sun = HelicalGear(
         number_of_teeth=n_sun,
@@ -240,6 +256,7 @@ def planetary_helical_gear():
         height=height,
         helix_angle=-beta,
         herringbone=herringbone,
+        profile_shift=shift_sun,
     )
     gear_planet1 = HelicalGear(
         number_of_teeth=n_planet,
@@ -247,28 +264,19 @@ def planetary_helical_gear():
         height=height,
         helix_angle=beta,
         herringbone=herringbone,
+        profile_shift=shift_planet,
     )
 
-    gear_planet2 = gear_planet1.copy()
-    gear_planet3 = gear_planet1.copy()
-
-    dir1 = RIGHT
-    # If the sun and ring number of teeth are not divisible by 3,
-    # the location of the planets is not trivial.
-    angle2 = root(lambda x: (x * n_sun + x * n_ring) % 1, 1.0 / 3).x[0] * 2 * PI
-    angle3 = root(lambda x: (x * n_sun + x * n_ring) % 1, 2.0 / 3).x[0] * 2 * PI
-    dir2 = rotate_vector(RIGHT, angle2)
-    dir3 = rotate_vector(RIGHT, angle3)
-
-    # using the mesh_to function to align planets with the sun
-    gear_planet1.mesh_to(gear_sun, target_dir=dir1)
-    gear_planet2.mesh_to(gear_sun, target_dir=dir2)
-    gear_planet3.mesh_to(gear_sun, target_dir=dir3)
+    # when number of teeth on ring and sun are not divisible by number of planets,
+    # the planets will not be perfectly evenly distributed
+    # this functions returns the best possible distribution of planets
+    angles = gearset.get_planet_angles_distributed()
 
     start = time.time()
-    gear_planet1_cad = gear_planet1.build_part()
-    gear_planet2_cad = gear_planet2.build_part()
-    gear_planet3_cad = gear_planet3.build_part()
+    planets_cad = []
+    for i in range(gearset.num_planets):
+        gear_planet1.mesh_to(gear_sun, target_dir=rotate_vector(RIGHT, angles[i]))
+        planets_cad.append(gear_planet1.build_part())
     gear_sun_cad = gear_sun.build_part()
     gear_ring_cad = gear_ring.build_part()
     print(f"gear build time: {time.time()-start}")
@@ -276,9 +284,7 @@ def planetary_helical_gear():
     return (
         gear_ring_cad,
         gear_sun_cad,
-        gear_planet1_cad,
-        gear_planet2_cad,
-        gear_planet3_cad,
+        *planets_cad,
     )
 
 
@@ -560,4 +566,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gears(), deviation=0.1, angular_tolerance=0.2)
+    show(spur_gear_backlash(), deviation=0.1, angular_tolerance=0.2)

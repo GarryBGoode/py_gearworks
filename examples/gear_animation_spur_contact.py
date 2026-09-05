@@ -68,6 +68,7 @@ gears = Compound(children=[a_gear1, a_gear2, edge_loc], label="gears")
 a_gear1.location = gear1.center_location_bottom
 a_gear2.location = gear2.center_location_bottom
 
+show(gears, deviation=0.02, angular_tolerance=0.055)
 
 duration = 4
 n = duration * 300
@@ -79,8 +80,6 @@ animation = Animation(gears)
 animation.add_track("/gears/gear1", "rz", time_track, gear1_track)
 animation.add_track("/gears/gear2", "rz", time_track, gear2_track)
 
-
-show(gears, deviation=0.02, angular_tolerance=0.055)
 
 # Start animation
 animation.animate(speed=1)

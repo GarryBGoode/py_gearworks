@@ -269,6 +269,9 @@ def apply_fillet(
         angle = -np.arctan2(p[1], p[0])
         return 0 < angle < pitch_angle / 2
 
+    def length_check(arc: crv.ArcCurve) -> bool:
+        return np.linalg.norm(arc(0) - arc(1)) > 1e-6
+
     ref_circle_guess = -pitch_angle / (2 * PI) / 4 * 1.01
     sol1 = crv.find_curve_intersect(
         tooth_curve,
@@ -309,10 +312,12 @@ def apply_fillet(
         if angle_check(arc(0)) and angle_check(arc(1)):
             if direction == 1:
                 tooth_curve.set_start_on(t2)
-                tooth_curve.insert(0, arc)
+                if length_check(arc):
+                    tooth_curve.insert(0, arc)
             else:
                 tooth_curve.set_end_on(t1)
-                tooth_curve.append(arc)
+                if length_check(arc):
+                    tooth_curve.append(arc)
         else:
             sharp_root = True
     else:
@@ -337,9 +342,11 @@ def apply_fillet(
                 fillet_radius,
                 start_locations=start_locations,
             )
+
             arc.set_start_on(0.5)
             tooth_curve.set_start_on(t2)
-            tooth_curve.insert(0, arc)
+            if length_check(arc):
+                tooth_curve.insert(0, arc)
 
         else:
             arc, t1, t2, sol = crv.calc_tangent_arc(
@@ -348,9 +355,11 @@ def apply_fillet(
                 fillet_radius,
                 start_locations=start_locations,
             )
+
             arc.set_end_on(0.5)
             tooth_curve.set_end_on(t1)
-            tooth_curve.append(arc)
+            if length_check(arc):
+                tooth_curve.append(arc)
 
     return tooth_curve
 
