@@ -4,13 +4,16 @@ A gear generator in python.
 Py-gearworks is built on build123d CAD package. It focuses on accurate geometric representation of gears, gear-pairs. Design calculations related to strength, pitting, efficiency may be implemented in the future - but currently not supported.
 
 # Installation
-Currently the recommended way for most users to install py_gearworks is to install from github directly (git is required on the user's system for this):
+Py_gearworks can be installed via pip:
 ```
-python -m pip install git+https://github.com/GarryBGoode/py_gearworks
+pip install py-gearworks
 ```
-Alternatively, one can clone or download this repository and install via this command from the repository root directory:
 ```
-python -m pip install .
+pip install git+https://github.com/GarryBGoode/py_gearworks
+```
+Alternatively, you can clone or download this repository and install via this command from the repository root directory:
+```
+pip install .
 ```
 # Dependencies
 
