@@ -44,6 +44,7 @@ Work in progress / partially supported:
 - Racks
 - Backlash control
 - Contact ratio calculation
+- Planetary drive design
 
 Not yet supported:
 
@@ -52,16 +53,16 @@ Not yet supported:
 - Face / crown gears
 
 Planned upcoming other features
-- Planetary drive design
 - Backlash, contact ratio and profile shift optimization
 
 # Example
 The example is built on VSCode with OCP VScode plugin.
-See `examples.py` for more.
+See [examples/examples.py](examples/examples.py) for more.
+<!-- BEGIN EXAMPLE: examples/readme_example.py -->
 ```python
 from py_gearworks import *
 from ocp_vscode import show
-
+from build123d import *
 
 # create 2 spur gears
 gear1 = SpurGear(
@@ -88,16 +89,32 @@ gear_part_1 = gear1.build_part()
 gear_part_2 = gear2.build_part()
 
 # center-bores are recommended to be added separately via build123d workflow
-# center_location_top is a build123d location object
-# multiplying with a location means placement at that location
+# center_location_top can be used as a build123d location object
+# location * Hole means placement of Hole at that location (build123d syntax)
 hole_obj_1 = gear1.center_location_top * Hole(radius=2, depth=4)
 gear_part_1 = gear_part_1.cut(hole_obj_1)
 hole_obj_2 = gear2.center_location_top * Hole(radius=2, depth=4)
 gear_part_2 = gear_part_2.cut(hole_obj_2)
 
+# export to STEP files (build123d export function)
+# note: export retains positioning, gear1 will not be at origin
+export_step(gear_part_1, "gear1.step")
+export_step(gear_part_2, "gear2.step")
+
+# export to DXF files (build123d export function)
+gear_wire_1 = gear1.build_boundary_wire()
+gear_wire_2 = gear2.build_boundary_wire()
+
+exporter = ExportDXF(unit=Unit.MM, line_weight=0.5)
+exporter.add_layer("Layer 1", line_type=LineType.CONTINUOUS)
+exporter.add_shape(gear_wire_1, layer="Layer 1")
+exporter.add_shape(gear_wire_2, layer="Layer 1")
+exporter.write("gears.dxf")
+
 # visualize parts
 show(gear_part_1, gear_part_2)
 ```
+<!-- END EXAMPLE -->
 
 ![Spur Gear Example](misc/media/spur_gear_example.png)
 

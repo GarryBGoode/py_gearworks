@@ -36,3 +36,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -x -n auto
+    - name: Check README examples are in sync
+      run: |
+        python scripts/sync_readme_examples.py --check

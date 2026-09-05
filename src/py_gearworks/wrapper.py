@@ -313,6 +313,75 @@ class GearInfoMixin:
         """Cone angles of reference radii at the top of the gear."""
         return self.cone_angles_at_z(self.gearcore.z_vals[-1])
 
+    def build_boundary_wire(self, z_ratio: float = 0):
+        """Generates a build123d Wire object of the gear-tooth slice at a given z-ratio.
+
+        Arguments
+        ----------
+        z_ratio: float, optional
+            Ratio of the height of the gear where the slice should be taken.
+            0 means at the bottom, 1 at the top. Default is 0.
+
+        Returns
+        -------
+        Wire
+        """
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.gearcore.curve_gen_at_z(z)
+        edges = generate_boundary_edges(profile, self.gearcore.transform)
+        return bd.Wire(edges)
+
+    def build_addendum_circle(self, z_ratio: float = 0):
+        """Generates a build123d Arc object of the addendum circle at a given z-ratio.
+
+        Arguments
+        ----------
+        z_ratio: float, optional
+            Ratio of the height of the gear where the slice should be taken.
+            0 means at the bottom, 1 at the top. Default is 0.
+
+        Returns
+        -------
+        Arc
+        """
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.radii_data_gen(z)
+        return arc_to_b123d(profile.r_a_curve)
+
+    def build_pitch_circle(self, z_ratio: float = 0):
+        """Generates a build123d Arc object of the pitch circle at a given z-ratio.
+
+        Arguments
+        ----------
+        z_ratio: float, optional
+            Ratio of the height of the gear where the slice should be taken.
+            0 means at the bottom, 1 at the top. Default is 0.
+
+        Returns
+        -------
+        Arc
+        """
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.radii_data_gen(z)
+        return arc_to_b123d(profile.r_p_curve)
+
+    def build_dedendum_circle(self, z_ratio: float = 0):
+        """Generates a build123d Arc object of the dedendum circle at a given z-ratio.
+
+        Arguments
+        ----------
+        z_ratio: float, optional
+            Ratio of the height of the gear where the slice should be taken.
+            0 means at the bottom, 1 at the top. Default is 0.
+
+        Returns
+        -------
+        Arc
+        """
+        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
+        profile = self.radii_data_gen(z)
+        return arc_to_b123d(profile.r_d_curve)
+
 
 @dataclasses.dataclass
 class InvoluteInputParam:
@@ -335,6 +404,24 @@ class InvoluteInputParam:
     crowning: float = 0
     inside_teeth: bool = False
     z_anchor: float = 0
+
+    def __post_init__(self):
+        if self.number_of_teeth < 0:
+            self.number_of_teeth = -self.number_of_teeth
+            self.inside_teeth = not self.inside_teeth
+
+        if np.mod(self.number_of_teeth, 1) > 1e-6:
+            raise ValueError(
+                f"Number of teeth must be a whole number. Got {self.number_of_teeth}."
+            )
+
+        if self.module <= 0:
+            raise ValueError(f"Module must be positive. Got {self.module}.")
+
+        if self.pressure_angle <= 0 or self.pressure_angle >= np.pi / 2:
+            raise ValueError(
+                f"Pressure angle must be between 0 and pi/2 radians. Got {self.pressure_angle}."
+            )
 
 
 class InvoluteGear(GearInfoMixin):
@@ -726,11 +813,24 @@ class InvoluteGear(GearInfoMixin):
             Only applies to parallel axis gears (spur, helical).
             Default is 0.0.
         """
+
+        if (
+            np.abs(self.inputparam.pressure_angle + other.inputparam.pressure_angle)
+            < 1e-6
+        ):
+            raise ValueError(
+                f"Gears must have the same pressure angle to mesh. pressure angle of this: {self.inputparam.pressure_angle}, pressure angle of other: {other.inputparam.pressure_angle}"
+            )
+
         if backlash is None:
             backlash = self.inputparam.backlash + other.inputparam.backlash
         backlash_act = self.inputparam.module * backlash
         target_dir = target_dir / np.linalg.norm(target_dir)
         if self.cone_angle != 0 or other.cone_angle != 0:
+            if self.cone_angle == 0 or other.cone_angle == 0:
+                raise ValueError(
+                    "Both gears must be bevel gears to mesh. One of the gears has cone_angle=0."
+                )
             v0 = calc_bevel_gear_placement_vector(
                 target_dir,
                 self.cone_data,
@@ -816,24 +916,6 @@ class InvoluteGear(GearInfoMixin):
         self.gearcore.transform.center = ORIGIN
         self.gearcore.transform.orientation = UNIT3X3
         self.gearcore.transform.angle = 0
-
-    def build_boundary_wire(self, z_ratio: float = 0):
-        """Generates a build123d Wire object of the gear-tooth slice at a given z-ratio.
-
-        Arguments
-        ----------
-        z_ratio: float, optional
-            Ratio of the height of the gear where the slice should be taken.
-            0 means at the bottom, 1 at the top. Default is 0.
-
-        Returns
-        -------
-        Wire
-        """
-        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
-        profile = self.gearcore.curve_gen_at_z(z)
-        edges = generate_boundary_edges(profile, self.gearcore.transform)
-        return bd.Wire(edges)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -1946,6 +2028,10 @@ class CycloidGear(GearInfoMixin):
             Default is 0.
         """
         if self.cone_angle != 0 or other.cone_angle != 0:
+            if self.cone_angle == 0 or other.cone_angle == 0:
+                raise ValueError(
+                    "Cannot mesh a bevel gear with a non-bevel gear. Both gears must have cone angles."
+                )
             v0 = calc_bevel_gear_placement_vector(
                 target_dir,
                 self.cone_data,
@@ -2269,8 +2355,14 @@ def generate_line_of_contact(
 
     curve1 = loa1.copy()
     curve1.set_start_and_end_on(trim_points[0], trim_points[1])
-    curve2 = loa2.copy()
-    curve2.set_start_and_end_on(trim_points[0], trim_points[1])
+
+    if isinstance(loa2, MirroredCurve):
+        curve2 = MirroredCurve(
+            curve1, plane_normal=loa2.plane_normal, center=loa2.center
+        )
+    else:
+        curve2 = loa2.copy()
+        curve2.set_start_and_end_on(trim_points[0], trim_points[1])
 
     return curve1, curve2
 
