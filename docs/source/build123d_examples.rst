@@ -41,11 +41,11 @@ but showcases the gear generator and its helper functions for build-123d workflo
 
 Highlights:
 
-* You can use `center_location_bottom` and `center_location_top` to align build123d parts with gear centers.
-* The :py:attr:`radii_data_top <py_gearworks.wrapper.GearInfoMixin.radii_data_top>` method generates reference curves for the gear.
-* The :py:func:`generate_line_of_contact() <py_gearworks.wrapper.generate_line_of_contact>` function is available for generating the line of contact between gears.
+* You can use :py:attr:`center_location_bottom <py_gearworks.wrapper.GearInfoMixin.center_location_bottom>`, :py:attr:`center_location_top <py_gearworks.wrapper.GearInfoMixin.center_location_top>`, to align build123d parts with gear centers.
+* Reference circles of the gear can be generated using the :py:meth:`build_addendum_circle() <py_gearworks.wrapper.GearInfoMixin.build_addendum_circle>` and :py:meth:`build_dedendum_circle() <py_gearworks.wrapper.GearInfoMixin.build_dedendum_circle>` methods.
+* The :py:func:`generate_line_of_contact() <py_gearworks.wrapper.generate_line_of_contact>` function is available for generating the line of contact between gears. Line of contact was used to design blocking section of the side channel.
 * Sometimes converter functions are needed such as :py:func:`arc_to_b123d() <py_gearworks.conv_build123d.arc_to_b123d>` and :py:func:`line_to_b123d() <py_gearworks.conv_build123d.line_to_b123d>`. These convert between py_gearworks' own geometry classes and build123d geometry.
-* Animation is used from `ocp_vscode` to visualize the gear meshing. Animation can be non-intuitive, but explaining it is beyond this example.
+* Animation is used from `ocp_vscode` to visualize the gear meshing.
 
 
 .. image:: ./assets/gearpump_1.png

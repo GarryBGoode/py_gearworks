@@ -16,6 +16,7 @@ Submodules
    py_gearworks.function_generators
    py_gearworks.gearmath
    py_gearworks.gearteeth
+   py_gearworks.planetary_gearset
    py_gearworks.wrapper
 
 Module contents

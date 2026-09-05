@@ -24,6 +24,7 @@ Python Modules, dependencies
 Py_gearworks was developed with the goal of minimizing dependencies.
 
 The main dependencies are:
+
 * build123d - for CAD geometry generation and export. Ocp_vscode kind of comes with build123d.
 * numpy: math
 * scipy: more math

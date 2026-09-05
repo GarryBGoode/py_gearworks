@@ -41,8 +41,6 @@ gear2 = pgw.SpurRingGear(
     outside_ring_coefficient=2.2,
     profile_shift=0.2,
     z_anchor=0.5,
-    # I used the angle kwarg to iteratively check for interference
-    angle=0.135,
 )
 
 
@@ -124,38 +122,43 @@ crescent.part.color = (0.5, 0.5, 0.8)
 
 
 # indicator sketches
-addendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_a_curve)
-addendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_a_curve)
+addendum_circle_1 = gear1.build_addendum_circle(z_ratio=1)
+addendum_circle_2 = gear2.build_addendum_circle(z_ratio=1)
 
 # dedendum sketches
-dedendum_circle_1 = pgw.arc_to_b123d(gear1.radii_data_top.r_d_curve)
-dedendum_circle_2 = pgw.arc_to_b123d(gear2.radii_data_top.r_d_curve)
+dedendum_circle_1 = gear1.build_dedendum_circle(z_ratio=1)
+dedendum_circle_2 = gear2.build_dedendum_circle(z_ratio=1)
 
-# involute base circle is not in the radii data
-# because radii data was meant to be generic and apply to other gears
-base_circle_1 = pgw.arc_to_b123d(gear1.circle_involute_base(z_ratio=1))
-base_circle_2 = pgw.arc_to_b123d(gear2.circle_involute_base(z_ratio=1))
+
+base_circle_1 = gear1.build_base_circle(z_ratio=1)
+base_circle_2 = gear2.build_base_circle(z_ratio=1)
 
 # generate lines of contact for the gear pair, and convert to b123d curves for display
 # note: pgw.generate_line_of_action() exists, it traces line of action
 #  from base circle to base circle
+
 # pgw.generate_line_of_contact() trims line of action to the set of points that are in
 #  contact with the gear teeth, and returns the trimmed lines of action
 loa1, loa2 = pgw.generate_line_of_contact(gear2, gear1, z_level=1)
+# loa1, loa2 are Curve objects, need to convert
 line_of_action_1 = pgw.line_to_b123d(loa1)
 line_of_action_2 = pgw.line_to_b123d(loa2)
+line_of_action_1.label = "line_of_action_1"
+line_of_action_2.label = "line_of_action_2"
 
 # coloring
 line_of_action_1.color = (1, 0.2, 0.2)
 line_of_action_2.color = (1, 0.2, 0.2)
 base_circle_1.color = (0, 0, 0)
 addendum_circle_1.color = (0, 0, 0)
+base_circle_2.color = (0, 0, 0)
+addendum_circle_2.color = (0, 0, 0)
 
 # construction of the housing top with channel volumes for oil-flow
 channel_thickness = 3
 # blocker width is aligned with the distance between the ends of the 2 lines of action
 # this is not official pump design advice
-blocker_width = min(
+blocker_width = max(
     (line_of_action_1 @ 1 - line_of_action_2 @ 1).length,
     (line_of_action_1 @ 0 - line_of_action_2 @ 0).length,
 )
@@ -164,7 +167,8 @@ with BuildPart() as housing_top:
     add(housing_base.part.split(tool=Plane.XY, keep=Keep.TOP))
 
     # main cavity + horizontal blocker
-    # the top_position rotates with the gear, but we only need the position here
+    # the center_location_top is a location object that moves and rotates with the gear,
+    # but we only need the position here
     with Locations(Location(gear2.center_location_top.position)):
         Cylinder(
             radius=r_outer_wall,

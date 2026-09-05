@@ -590,8 +590,7 @@ class InvoluteGear(GearInfoMixin):
             Ratio of the height of the gear where the slice should be taken.
             0 means at the bottom, 1 at the top. Default is 0.
         """
-        z = z_ratio * self.gearcore.z_vals[1] + (1 - z_ratio) * self.gearcore.z_vals[0]
-        invo_curve, trf = self.involute_curve_at_z(z)
+        invo_curve, trf = self.involute_curve_at_z(z_ratio)
         r = invo_curve.base_radius
         circle_ref = crv.ArcCurve(radius=r, center=ORIGIN, angle=2 * PI).transform(trf)
         return circle_ref
@@ -782,6 +781,22 @@ class InvoluteGear(GearInfoMixin):
             self.builder.solid, self.gearcore.transform
         )
         return self.builder.part_transformed
+
+    def build_base_circle(self, z_ratio: float = 0):
+        """Generates a build123d Arc object of the base circle at a given z-ratio.
+
+        Arguments
+        ----------
+        z_ratio: float, optional
+            Ratio of the height of the gear where the slice should be taken.
+            0 means at the bottom, 1 at the top. Default is 0.
+
+        Returns
+        -------
+        Arc
+        """
+        circle = self.circle_involute_base(z_ratio)
+        return arc_to_b123d(circle)
 
     def mesh_to(
         self,
