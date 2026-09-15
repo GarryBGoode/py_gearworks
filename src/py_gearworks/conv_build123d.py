@@ -146,9 +146,7 @@ class GearBuilder(GearToNurbs):
                 self.solid = split_result[0]
 
         self.part = bd.Part() + self.solid
-        self.part_transformed = bd.BasePartObject(
-            apply_transform_part(self.solid, self.gear.transform)
-        )
+        self.part_transformed = apply_transform_part(self.part, self.gear.transform)
         # stop here with debugger
         pass
 
@@ -480,8 +478,10 @@ class GearBuilder_old(GearToNurbs):
 def apply_transform_part(part: bd.Part, transform: GearTransform):
     location1 = transform2Location(transform)
     part = part.scale(transform.scale)
-    part2 = location1 * part
-    return part2
+    # part2 = location1 * part
+    # part.location = location1
+    part = location1 * part
+    return part
 
 
 def apply_animation(gear: pgw.Gear, part: bd.Part, time: float = 1):

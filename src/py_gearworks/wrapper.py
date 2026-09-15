@@ -250,7 +250,7 @@ class GearInfoMixin:
         return self.radii_data_gen(self.gearcore.z_vals[-1])
 
     def proportion_to_z(self, prop):
-        return prop * self.gearcore.z_vals[1] + (1 - prop) * self.gearcore.z_vals[0]
+        return prop * self.gearcore.z_vals[-1] + (1 - prop) * self.gearcore.z_vals[0]
 
     def p2z(self, prop):
         return self.proportion_to_z(prop)
@@ -625,13 +625,10 @@ class InvoluteGear(GearInfoMixin):
         gamma = self.inputparam.cone_angle / 2
 
         def crowning_func(z, offset=0):
-            return (
-                offset
-                - (z * 2 / self.inputparam.height - 1) ** 2
-                * self.inputparam.crowning
-                / rp_ref
-                * 1e-3
-            )
+            z_rel = (z - self.gearcore.z_vals[0]) / (
+                self.gearcore.z_vals[-1] - self.gearcore.z_vals[0]
+            ) - 0.5
+            return offset - (z_rel * 2) ** 2 * self.inputparam.crowning / rp_ref * 1e-3
 
         backlash_angle_val = (
             self.inputparam.backlash
@@ -1487,6 +1484,7 @@ class HelicalRingGear(InvoluteGear):
         z_anchor: float = 0,
     ):
         beta = helix_angle
+        self.herringbone = herringbone
         super().__init__(
             number_of_teeth=number_of_teeth,
             helix_angle=beta,
@@ -1508,8 +1506,10 @@ class HelicalRingGear(InvoluteGear):
             z_anchor=z_anchor,
         )
 
+    def calc_params(self):
+        super().calc_params()
         # correct for herringbone design
-        if herringbone:
+        if self.herringbone:
 
             zmax = self.gearcore.z_vals[-1]
             zmin = self.gearcore.z_vals[0]
