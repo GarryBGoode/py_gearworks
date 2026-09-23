@@ -21,7 +21,7 @@ classifiers = [
 keywords = ["gears", "CAD", "python"]
 
 dependencies = [
-    "build123d >= 0.9.1",
+    "build123d >= 0.11.0",
     "numpy >= 2, < 3",
     "scipy >= 1.10.1",
 ]

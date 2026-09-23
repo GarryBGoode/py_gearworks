@@ -237,12 +237,11 @@ class GearBuilder(GearToNurbs):
         r_o = -self.gear.shape_recipe.limits.h_o + self.gear.tooth_param.num_teeth / 2
         ring_base = bd.Edge.make_circle(radius=r_o, plane=bd.Plane.XY)
 
-        edge_ring = bd.Line(
-            [
-                bd.Vector((r_o, 0, self.gear.z_vals[0])),
-                bd.Vector((r_o, 0, self.gear.z_vals[-1])),
-            ]
+        edge_ring = bd.Edge.make_line(
+            bd.Vector((r_o, 0, self.gear.z_vals[0])),
+            bd.Vector((r_o, 0, self.gear.z_vals[-1])),
         )
+
         ring_surf = bd.Face.sweep(profile=edge_ring, path=ring_base)
         return ring_surf
 
@@ -478,8 +477,6 @@ class GearBuilder_old(GearToNurbs):
 def apply_transform_part(part: bd.Part, transform: GearTransform):
     location1 = transform2Location(transform)
     part = part.scale(transform.scale)
-    # part2 = location1 * part
-    # part.location = location1
     part = location1 * part
     return part
 
