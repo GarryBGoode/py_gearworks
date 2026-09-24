@@ -28,7 +28,11 @@ from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism
 from OCP.ShapeFix import ShapeFix_Face, ShapeFix_Solid
 from OCP.TopAbs import TopAbs_SHELL
 from OCP.TopoDS import TopoDS
-from OCP.TopTools import TopTools_ListOfShape
+try:
+    # OCP >= 8.0 (OCCT 8) moved the NCollection list bindings to OCP.collections
+    from OCP.collections import List_TopoDS_Shape as TopTools_ListOfShape
+except ImportError:
+    from OCP.TopTools import TopTools_ListOfShape
 from OCP.gp import gp_Ax3, gp_Dir, gp_Pln, gp_Pnt, gp_Sphere, gp_Vec
 from typing import Callable
 import dataclasses
