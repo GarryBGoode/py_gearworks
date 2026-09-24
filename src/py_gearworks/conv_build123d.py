@@ -17,6 +17,25 @@ import build123d as bd
 from py_gearworks.conv_spline import *
 from py_gearworks.base_classes import *
 from scipy.spatial.transform import Rotation as scp_Rotation
+from OCP.BRepAlgoAPI import BRepAlgoAPI_BuilderAlgo
+from OCP.BRepBuilderAPI import (
+    BRepBuilderAPI_MakeFace,
+    BRepBuilderAPI_MakeSolid,
+    BRepBuilderAPI_MakeWire,
+    BRepBuilderAPI_Sewing,
+)
+from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism
+from OCP.ShapeFix import ShapeFix_Face, ShapeFix_Solid
+from OCP.TopAbs import TopAbs_SHELL
+from OCP.TopoDS import TopoDS
+try:
+    # OCP >= 8.0 (OCCT 8) moved the NCollection list bindings to OCP.collections
+    from OCP.collections import List_TopoDS_Shape as TopTools_ListOfShape
+except ImportError:
+    from OCP.TopTools import TopTools_ListOfShape
+from OCP.gp import gp_Ax3, gp_Dir, gp_Pln, gp_Pnt, gp_Sphere, gp_Vec
+from typing import Callable
+import dataclasses
 import numpy as np
 import time
 import logging
@@ -52,6 +71,15 @@ class GearBuilder(GearToNurbs):
         Example: for a 3-point spline and oversampling of 3, the unkown point is the
         middle one, the number of evaluations are the 2 end points + 3 in the middle,
         so 5 in total.
+    side_surface_extension_ratio : float, optional
+        Bevel gears only. Side surfaces are extended beyond the top and bottom by this
+        ratio of the gear height, to be trimmed by the spherical covers. Doubled on
+        each failed attempt. The default is 0.01.
+    cover_extension_ratio : float, optional
+        Bevel gears only. Spherical cover rings span from the outer ring (r_o) to
+        beyond the tooth profile, extended by this ratio of the distance between r_o
+        and the farther of the addendum and dedendum circles. They are trimmed by the
+        side surfaces. The default is 0.1.
     """
 
     def __init__(
@@ -61,7 +89,9 @@ class GearBuilder(GearToNurbs):
         n_points_vert: int = 4,
         oversampling_ratio: float = 3,
         side_surface_extension_ratio: float = 0.01,
+        cover_extension_ratio: float = 0.1,
     ):
+        start_builder = time.time()
         if gear.cone.cone_angle == 0:
             # gear construction by creating all outside surfaces
             # and then using them to define a Solid
@@ -71,32 +101,55 @@ class GearBuilder(GearToNurbs):
                 n_points_vert=n_points_vert,
                 oversampling_ratio=oversampling_ratio,
             )
+            logging.info(
+                f"Spline generation time: {time.time()-start_builder:.5f} seconds"
+            )
             bot_cover = self.generate_cover(
                 self.nurb_profile_stacks[0][0], self.gear_stacks[0][0]
             )
-            top_cover = self.generate_cover(
-                self.nurb_profile_stacks[-1][-1], self.gear_stacks[-1][-1]
-            )
-            surfaces = self.gen_side_surfaces()
-            if gear.tooth_param.inside_teeth:
-                surfaces.append(self.gen_outside_ring())
-            surfaces.append(bot_cover)
-            surfaces.append(top_cover)
+            z_bot = self.gear_stacks[0][0].transform.center[2]
+            z_top = self.gear_stacks[-1][-1].transform.center[2]
 
-            self.solid = bd.Solid(bd.Shell(surfaces))
+            if self.is_prismatic():
+                # profile does not change along z (no twist, crowning etc.),
+                # the gear is a simple extrusion of the bottom cover
+                time_extrude = time.time()
+                prism = BRepPrimAPI_MakePrism(
+                    bot_cover.wrapped, gp_Vec(0, 0, z_top - z_bot)
+                )
+                self.solid = bd.Solid(TopoDS.Solid(prism.Shape()))
+                logging.info(f"Extrusion time: {time.time()-time_extrude:.5f} seconds")
+            else:
+                top_cover = self.generate_cover(
+                    self.nurb_profile_stacks[-1][-1], self.gear_stacks[-1][-1]
+                )
+                surfaces = self.gen_side_surfaces()
+                if gear.tooth_param.inside_teeth:
+                    surfaces.append(self.gen_outside_ring())
+                surfaces.append(bot_cover)
+                surfaces.append(top_cover)
+
+                time_solid_stitch = time.time()
+                self.solid = solid_from_faces(
+                    surfaces,
+                    ref_face=bot_cover,
+                    outward=lambda p: bd.Vector(0, 0, z_bot - z_top),
+                )
+                logging.info(
+                    f"Solid stitching time: {time.time()-time_solid_stitch:.5f} seconds"
+                )
         else:
-            # gear construction by defining a reference solid (a blank)
-            # and cutting it with the side surfaces
+            # gear construction by trimming over-extended side surfaces and spherical
+            # cover rings against each other, then sewing them together with the
+            # center faces (flat discs, or cone ring for inside teeth)
             z_vals_save = copy.deepcopy(gear.z_vals)
             zdiff = gear.z_vals[-1] - gear.z_vals[0]
             current_ratio = side_surface_extension_ratio
 
-            # Side surfaces of gears are generated constructively, from Spline points.
-            # Top and bottom surfaces are generated by intersection of spherical surface and sides.
-            # This intersection is performed by the split() function, which fails sometimes.
-            # The reason is not known, but a few different extension ratios are attempted.
+            # The trimming is performed by a general fuse of faces, which might fail
+            # on edge cases. A few different extension ratios are attempted.
             for attempt in range(4):  # initial attempt + up to 3 retries
-                # extend z_vals to ensure cutting intersection for the split op.
+                # extend z_vals to ensure side surfaces cross the covers.
                 gear.z_vals = copy.deepcopy(z_vals_save)
                 gear.z_vals[-1] += current_ratio * zdiff
                 gear.z_vals[0] -= current_ratio * zdiff
@@ -109,142 +162,175 @@ class GearBuilder(GearToNurbs):
                 # restore original z_vals
                 self.gear.z_vals = copy.deepcopy(z_vals_save)
                 side_surfaces = self.gen_side_surfaces()
-                surface_shell = bd.Shell(side_surfaces)
 
-                # parameters of ref_solid depend on accurate (original) z_vals
-                ref_solid = self.gen_ref_solid()
-
-                # cut ref solid by side_surfaces
-                split_result = ref_solid.split(tool=surface_shell, keep=bd.Keep.ALL)
-
-                if len(split_result) >= 2:
-                    break
-
-                if attempt < 3:
-                    warnings.warn(
-                        f"Split operation failed (attempt {attempt + 1}), retrying "
-                        f"with extension ratio {current_ratio * 2:.4f}.",
-                        RuntimeWarning,
-                        stacklevel=2,
+                start_trim = time.time()
+                try:
+                    # cover parameters depend on accurate (original) z_vals
+                    self.solid = self.gen_bevel_solid(
+                        side_surfaces, cover_extension_ratio
                     )
-                    current_ratio *= 2
+                    logging.info(
+                        f"Trimming and stitching time: "
+                        f"{time.time()-start_trim:.5f} seconds"
+                    )
+                    break
+                except RuntimeError as err:
+                    if attempt < 3:
+                        warnings.warn(
+                            f"Bevel gear construction failed (attempt {attempt + 1}): "
+                            f"{err} Retrying with extension ratio "
+                            f"{current_ratio * 2:.4f}.",
+                            RuntimeWarning,
+                            stacklevel=2,
+                        )
+                        current_ratio *= 2
             else:
                 raise RuntimeError(
-                    "Split operation of blank solid via gear surfaces failed "
+                    "Trimming gear surfaces by spherical covers failed "
                     "after 4 attempts."
                 )
 
-            # the valid result is the one with the smaller volume out of the 2
-            # ref_solid.split may return a tuple (immutable), so use sorted()
-            # which works for both tuples and lists and returns a new list
-            split_result = sorted(
-                split_result, key=lambda x: x.bounding_box().center().Z
-            )
-            if self.gear.tooth_param.inside_teeth:
-                self.solid = split_result[1]
-            else:
-                self.solid = split_result[0]
-
         self.part = bd.Part() + self.solid
-        self.part_transformed = bd.BasePartObject(
-            apply_transform_part(self.solid, self.gear.transform)
+        self.part_transformed = apply_transform_part(self.part, self.gear.transform)
+
+        logging.info(
+            f"Total time for generation: {time.time()-start_builder:.5f} seconds"
         )
-        # stop here with debugger
-        pass
 
-    def gen_ref_solid(self):
-        profile0 = self.gear.curve_gen_at_z(self.gear.z_vals[0])
-        profile1 = self.gear.curve_gen_at_z(self.gear.z_vals[-1])
+    def gen_bevel_solid(
+        self, side_surfaces: list[bd.Face], cover_extension_ratio: float
+    ) -> bd.Solid:
+        """Builds the Solid of a bevel gear from the over-extended side surfaces.
 
+        Spherical cover rings (bottom and top) and side surfaces are trimmed against
+        each other via a general fuse, which only intersects faces instead of solids.
+        The trimmed faces are sewn together with the center faces: flat discs for
+        outside teeth, a cone ring for inside teeth."""
         gearcopy = copy.deepcopy(self.gear)
         gearcopy.transform = GearTransform()
+        covers = [
+            SphereCover.from_gear(gearcopy, z, cover_extension_ratio)
+            for z in (gearcopy.z_vals[0], gearcopy.z_vals[-1])
+        ]
+        cover_bot, cover_top = covers
+        cover_faces = [cover.make_face() for cover in covers]
 
-        center0, R0 = gearcopy.sphere_data_at_z(self.gear.z_vals[0])
-        center1, R1 = gearcopy.sphere_data_at_z(self.gear.z_vals[-1])
-        R0 = np.abs(R0)
-        R1 = np.abs(R1)
+        if self.gear.tooth_param.inside_teeth:
+            height = cover_top.z_o - cover_bot.z_o
+            cone = bd.Solid.make_cone(
+                cover_bot.r_o,
+                cover_top.r_o,
+                np.abs(height),
+                plane=bd.Plane(
+                    origin=(0, 0, cover_bot.z_o),
+                    x_dir=cover_bot.x_dir,
+                    z_dir=(0, 0, np.sign(height)),
+                ),
+            )
+            center_faces = [cone.faces().sort_by(bd.Axis.Z)[1]]
+            # the body is between the cone and the teeth, outward is away from teeth
+            radial_sign = np.sign(cover_bot.r_o - cover_bot.r_end)
 
-        bottom_angle = (
-            180 / PI * gearcopy.shape_recipe(gearcopy.z_vals[0]).transform.angle
-        )
-        top_angle = (
-            180 / PI * gearcopy.shape_recipe(gearcopy.z_vals[-1]).transform.angle
-        )
-        sph1 = (
-            bd.Solid.make_sphere(radius=R0, angle1=-90, angle2=90, angle3=360)
-            .rotate(bd.Axis.Z, bottom_angle)
-            .translate(center0)
-        )
-        sph2 = (
-            bd.Solid.make_sphere(radius=R1, angle1=-90, angle2=90, angle3=360)
-            .rotate(bd.Axis.Z, top_angle)
-            .translate(center1)
-        )
-        ref_solid = (sph1 + sph2) - sph1.intersect(sph2)
-        ref_solid = ref_solid
-
-        c_o_0 = profile0.transform(profile0.ro_curve.center)
-        c_o_1 = profile1.transform(profile1.ro_curve.center)
-        h_o = c_o_1[2] - c_o_0[2]
-        r_o_0 = profile0.ro_curve.radius * profile0.transform.scale
-        r_o_1 = profile1.ro_curve.radius * profile1.transform.scale
-        r_o_cone = bd.Solid.make_cone(
-            r_o_0, r_o_1, h_o, plane=(bd.Plane.XY).offset(c_o_0[2])
-        )
-
-        if isinstance(ref_solid, bd.ShapeList):
-            ref_solid = ref_solid.sort_by_distance(np2v((c_o_0 + c_o_1) / 2))[0]
-
-        if gearcopy.tooth_param.inside_teeth:
-            r_o_face = r_o_cone.faces().sort_by(bd.Axis.Z)[1]
-
-            split_result = ref_solid.split(r_o_face, keep=bd.Keep.ALL)
-
-            split_result = sorted(split_result, key=lambda x: x.volume)
-            ref_solid = split_result[0]
+            def outward(p: bd.Vector):
+                return bd.Vector(p.X, p.Y, 0) * radial_sign
 
         else:
-            ref_solid = ref_solid.fuse(r_o_cone)
-            ref_solid = ref_solid.clean()
-            ref_solid = ref_solid.split(bd.Plane.XY.offset(c_o_0[2]), keep=bd.Keep.TOP)
+            center_faces = [cover.make_disc() for cover in covers]
 
-        return ref_solid
+            def outward(p: bd.Vector):
+                return bd.Vector(0, 0, cover_bot.z_o - cover_top.z_o)
+
+        # BRepAlgoAPI_BuilderAlgo is OCCT's General Fuse algorithm, the common engine
+        # behind all boolean operations (fuse, cut, common, split). Unlike those, it
+        # does not select or discard anything: it intersects all arguments with each
+        # other and splits every argument into fragments along the intersection
+        # curves. Fragments share the new edges, so they fit together without gaps.
+        # Here it works as a mutual split of faces: side surfaces are cut into parts
+        # below / between / above the covers, and the covers are cut along the tooth
+        # profile. Selecting which fragments to keep is done manually below.
+        # The center faces are included so that their r_o circle edges get merged
+        # with the coinciding edges of the cover rings.
+        fuse = BRepAlgoAPI_BuilderAlgo()
+        arguments = TopTools_ListOfShape()
+        # Side surfaces go in a single compound argument. OCCT does not compute
+        # interferences between sub-shapes of the same argument, so the side faces
+        # are only intersected with the covers, not with each other (they only touch
+        # along shared edges anyway, which the final sewing takes care of).
+        for shape in [bd.Compound(side_surfaces), *cover_faces, *center_faces]:
+            arguments.Append(shape.wrapped)
+        fuse.SetArguments(arguments)
+        fuse.SetRunParallel(True)
+        fuse.Build()
+        if not fuse.IsDone():
+            raise RuntimeError("General fuse of gear faces failed.")
+
+        tol = 1e-5 * max(cover.radius for cover in covers)
+        faces = []
+        for face in side_surfaces:
+            # drop the over-extended parts of side surfaces
+            faces.extend(
+                fragment
+                for fragment in fuse_fragments(fuse, face)
+                if not any(
+                    is_beyond_covers(vertex, covers, tol)
+                    for vertex in fragment.vertices()
+                )
+            )
+        for cover, cover_face in zip(covers, cover_faces):
+            # the ring is split into the part bounded by the r_o circle and the tooth
+            # profile, and the over-extended part beyond the tooth profile
+            ring_fragments = [
+                fragment
+                for fragment in fuse_fragments(fuse, cover_face)
+                if any(cover.is_on_r_o(vertex, tol) for vertex in fragment.vertices())
+            ]
+            if len(ring_fragments) != 1:
+                raise RuntimeError("Side surfaces did not cleanly split the cover.")
+            faces.extend(ring_fragments)
+        center_fragments = [
+            fragment for face in center_faces for fragment in fuse_fragments(fuse, face)
+        ]
+        faces.extend(center_fragments)
+
+        return solid_from_faces(faces, ref_face=center_fragments[0], outward=outward)
 
     def gen_side_surfaces(self):
+        surface_gen_start = time.time()
         n_teeth = self.gear.tooth_param.num_teeth_act
         surfaces = []
 
+        patches_z = [
+            [*surfdata_z.get_patches()][:-3] for surfdata_z in self.side_surf_data
+        ][: len(self.gear.z_vals) - 1]
+
         for j in range(n_teeth):
-            for k in range(len(self.gear.z_vals) - 1):
-                surfdata_z = self.side_surf_data[k]
-                patches = [*surfdata_z.get_patches()]
-                for patch in patches[:-3]:
+            # rotating the control points is much cheaper than rotating the Face
+            rot = rot_z(self.gear.tooth_param.pitch_angle * j)
+            for patches in patches_z:
+                for patch in patches:
                     # shape: vert x horiz x xyz
-                    points = patch["points"]
+                    points = patch["points"] @ rot.T
                     weights = patch["weights"]
                     vpoints = [
-                        nppoint2Vector(points[k]) for k in range(points.shape[0])
+                        nppoint2Vector(points[i]) for i in range(points.shape[0])
                     ]
-                    face = bd.Face.make_bezier_surface(
-                        vpoints, weights.tolist()
-                    ).rotate(
-                        bd.Axis.Z,
-                        angle=self.gear.tooth_param.pitch_angle * j * 180 / PI,
-                    )
+                    face = bd.Face.make_bezier_surface(vpoints, weights.tolist())
                     surfaces.append(face)
 
+        logging.info(
+            f"Surface generation time: {time.time()-surface_gen_start:.5f} seconds"
+        )
         return surfaces
 
     def gen_outside_ring(self):
         r_o = -self.gear.shape_recipe.limits.h_o + self.gear.tooth_param.num_teeth / 2
         ring_base = bd.Edge.make_circle(radius=r_o, plane=bd.Plane.XY)
 
-        edge_ring = bd.Line(
-            [
-                bd.Vector((r_o, 0, self.gear.z_vals[0])),
-                bd.Vector((r_o, 0, self.gear.z_vals[-1])),
-            ]
+        edge_ring = bd.Edge.make_line(
+            bd.Vector((r_o, 0, self.gear.z_vals[0])),
+            bd.Vector((r_o, 0, self.gear.z_vals[-1])),
         )
+
         ring_surf = bd.Face.sweep(profile=edge_ring, path=ring_base)
         return ring_surf
 
@@ -287,6 +373,7 @@ class GearBuilder(GearToNurbs):
                 splines = gen_splines(curve)
                 face_tooth = bd.Face.make_surface(bd.Wire(splines))
                 num_teeth = self.gear.tooth_param.num_teeth_act
+                face_fuse_time = time.time()
                 out_face = bd.Face.fuse(
                     *[
                         face_tooth.rotate(
@@ -295,33 +382,64 @@ class GearBuilder(GearToNurbs):
                         for j in range(num_teeth)
                     ]
                 )
+                logging.info(
+                    f"Face fuse time: {time.time()-face_fuse_time:.5f} seconds"
+                )
                 return out_face
         else:
 
             num_teeth = self.gear.tooth_param.num_teeth_act
-            curve = crv.NURBSCurve.from_curve_chain(nurb_stack.profile)
-            curve.del_inactive_curves()
-            curve.enforce_continuity()
-            splines = gen_splines(curve)
-            profile_edge = bd.Wire(splines)
-            splines = bd.Edge() + [
-                profile_edge.rotate(
-                    axis=bd.Axis.Z,
-                    angle=nurb_stack.pitch_angle * 180 / PI * j,
-                )
-                for j in range(num_teeth)
-            ]
+            curve = cover_profile_curve(nurb_stack)
+            profile_edge_time = time.time()
+            # rotating control points and joining all edges once is much cheaper
+            # than rotating and fusing Wires of each tooth
+            edges = []
+            for j in range(num_teeth):
+                rot = rot_z(nurb_stack.pitch_angle * j)
+                for sub_curve in curve.get_curves():
+                    edges.append(
+                        bd.Edge.make_bezier(
+                            *nppoint2Vector(sub_curve.points @ rot.T),
+                            weights=sub_curve.weights.tolist(),
+                        )
+                    )
+            profile_wire = make_wire_ordered(edges)
+            logging.info(
+                f"Profile edge generation time: {time.time()-profile_edge_time:.5f} seconds"
+            )
+
+            face_fuse_time = time.time()
+            z_val = gear_stack.transform.center[2]
 
             if self.gear.tooth_param.inside_teeth:
                 r_o = (
                     -self.gear.shape_recipe.limits.h_o
                     + self.gear.tooth_param.num_teeth / 2
                 )
-                z_val = gear_stack.transform.center[2]
                 ring = bd.Edge.make_circle(radius=r_o, plane=bd.Plane.XY.offset(z_val))
-                return bd.Face(bd.Wire(ring), inner_wires=[bd.Wire(splines)])
+                face = make_planar_face(
+                    z_val, bd.Wire(ring), inner_wires=[profile_wire]
+                )
             else:
-                return bd.Face(bd.Wire(splines))
+                face = make_planar_face(z_val, profile_wire)
+            logging.info(f"Face fuse time: {time.time()-face_fuse_time:.5f} seconds")
+            return face
+
+    def is_prismatic(self, tol=1e-7):
+        """Returns True if the bottom and top 2D profiles are identical, meaning the
+        gear can be generated by extruding the bottom cover."""
+        curves_bot = cover_profile_curve(self.nurb_profile_stacks[0][0]).get_curves()
+        curves_top = cover_profile_curve(self.nurb_profile_stacks[-1][-1]).get_curves()
+        if len(curves_bot) != len(curves_top):
+            return False
+        for c_bot, c_top in zip(curves_bot, curves_top):
+            if c_bot.points.shape != c_top.points.shape:
+                return False
+            if not np.allclose(c_bot.points[:, :2], c_top.points[:, :2], atol=tol):
+                return False
+            if not np.allclose(c_bot.weights, c_top.weights, atol=tol):
+                return False
+        return True
 
 
 class GearBuilder_old(GearToNurbs):
@@ -480,8 +598,8 @@ class GearBuilder_old(GearToNurbs):
 def apply_transform_part(part: bd.Part, transform: GearTransform):
     location1 = transform2Location(transform)
     part = part.scale(transform.scale)
-    part2 = location1 * part
-    return part2
+    part = location1 * part
+    return part
 
 
 def apply_animation(gear: pgw.Gear, part: bd.Part, time: float = 1):
@@ -520,6 +638,193 @@ def gen_splines(curve_bezier: Curve):
         vectors = nppoint2Vector(curve_bezier.points)
         weights = curve_bezier.weights.tolist()
         return bd.Edge.make_bezier(*vectors, weights=weights)
+
+
+def rot_z(angle: float):
+    """Rotation matrix around the Z axis."""
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+
+def cover_profile_curve(nurb_stack: GearRefProfileExtended):
+    """NURBS curve of one tooth of the 2D profile, used for flat covers."""
+    curve = crv.NURBSCurve.from_curve_chain(nurb_stack.profile)
+    curve.del_inactive_curves()
+    curve.enforce_continuity()
+    return curve
+
+
+def make_wire_ordered(edges: list[bd.Edge]):
+    """Joins edges that are already ordered head-to-tail into a Wire.
+    Skips the edge sorting and cleaning of bd.Wire(), falls back to it on failure."""
+    wire_builder = BRepBuilderAPI_MakeWire()
+    for edge in edges:
+        wire_builder.Add(edge.wrapped)
+    if wire_builder.IsDone():
+        return bd.Wire(wire_builder.Wire())
+    return bd.Wire(edges)
+
+
+def make_planar_face(z: float, outer_wire: bd.Wire, inner_wires=()):
+    """Makes a face on the XY plane offset to z. Skips the planarity search and
+    wire fixing of bd.Face(), since the plane is known."""
+    plane = gp_Pln(gp_Pnt(0, 0, z), gp_Dir(0, 0, 1))
+    face_builder = BRepBuilderAPI_MakeFace(plane, outer_wire.wrapped, True)
+    if not inner_wires:
+        return bd.Face(face_builder.Face())
+    for inner_wire in inner_wires:
+        face_builder.Add(inner_wire.wrapped)
+    # inner wires need to be oriented opposite to outer wire
+    face_fix = ShapeFix_Face(face_builder.Face())
+    face_fix.FixOrientation()
+    face_fix.Perform()
+    return bd.Face(TopoDS.Face(face_fix.Result()))
+
+
+@dataclasses.dataclass
+class SphereCover:
+    """Spherical ring of a bevel gear's top or bottom cover. It spans from the r_o
+    circle (inner or outer ring of the tooth profile) to beyond the tooth profile. The
+    sphere is centered on the Z axis, latitudes are measured from the sphere center's XY
+    plane.
+    """
+
+    center: np.ndarray
+    radius: float
+    angle: float
+    lat_o: float
+    lat_end: float
+
+    @classmethod
+    def from_gear(cls, gear: pgw.Gear, z: float, extension_ratio: float):
+        """Cover of the gear at z. The gear should have default (identity)
+        transform."""
+        center, radius = gear.sphere_data_at_z(z)
+        profile = gear.curve_gen_at_z(z)
+
+        def latitude(p):
+            d = p - center
+            return np.arctan2(d[2], np.hypot(d[0], d[1]))
+
+        lat_o = latitude(profile.transform(profile.ro_curve(0)))
+        # addendum or dedendum circle, whichever is farther from r_o
+        lat_far = max(
+            latitude(profile.transform(profile.ra_curve(0.5))),
+            latitude(profile.transform(profile.rd_curve(0.5))),
+            key=lambda lat: np.abs(lat - lat_o),
+        )
+        lat_end = np.clip(
+            lat_far + extension_ratio * (lat_far - lat_o), -PI / 2, PI / 2
+        )
+        return cls(
+            center=center,
+            radius=np.abs(radius),
+            angle=gear.shape_recipe(z).transform.angle,
+            lat_o=lat_o,
+            lat_end=lat_end,
+        )
+
+    @property
+    def r_o(self):
+        """Radius of the r_o circle."""
+        return self.radius * np.cos(self.lat_o)
+
+    @property
+    def r_end(self):
+        """Radius of the ring's end circle, beyond the tooth profile."""
+        return self.radius * np.cos(self.lat_end)
+
+    @property
+    def z_o(self):
+        """Z coordinate of the r_o circle."""
+        return self.center[2] + self.radius * np.sin(self.lat_o)
+
+    @property
+    def x_dir(self):
+        """Direction of the seam, rotated along with the tooth profile."""
+        return (np.cos(self.angle), np.sin(self.angle), 0)
+
+    def make_face(self) -> bd.Face:
+        axis = gp_Ax3(gp_Pnt(*self.center), gp_Dir(0, 0, 1), gp_Dir(*self.x_dir))
+        face_builder = BRepBuilderAPI_MakeFace(
+            gp_Sphere(axis, self.radius),
+            0,
+            2 * PI,
+            min(self.lat_o, self.lat_end),
+            max(self.lat_o, self.lat_end),
+        )
+        return bd.Face(face_builder.Face())
+
+    def make_disc(self) -> bd.Face:
+        """Flat disc bounded by the r_o circle."""
+        plane = bd.Plane(origin=(0, 0, self.z_o), x_dir=self.x_dir, z_dir=(0, 0, 1))
+        circle = bd.Edge.make_circle(self.r_o, plane=plane)
+        return make_planar_face(self.z_o, bd.Wire(circle))
+
+    def signed_distance(self, p: bd.Vertex):
+        """Positive outside of the sphere, negative inside."""
+        return np.linalg.norm(np.array([p.X, p.Y, p.Z]) - self.center) - self.radius
+
+    def is_on_r_o(self, p: bd.Vertex, tol: float):
+        return (
+            np.abs(np.hypot(p.X, p.Y) - self.r_o) < tol and np.abs(p.Z - self.z_o) < tol
+        )
+
+
+def is_beyond_covers(p: bd.Vertex, covers: list[SphereCover], tol: float):
+    """True if p is clearly outside the region between the 2 (concentric) covers.
+    Inside the region p is outside of one sphere and inside the other."""
+    d0 = covers[0].signed_distance(p)
+    d1 = covers[1].signed_distance(p)
+    return min(np.abs(d0), np.abs(d1)) > tol and np.sign(d0) == np.sign(d1)
+
+
+def fuse_fragments(fuse: BRepAlgoAPI_BuilderAlgo, face: bd.Face) -> list[bd.Face]:
+    """Fragments of an input face after a general fuse operation.
+
+    Uses the history of the operation: Modified() lists the fragments an input face
+    was split into, and it is empty when the face was left intact, in which case the
+    face itself is part of the result."""
+    if fuse.IsDeleted(face.wrapped):
+        return []
+    modified = fuse.Modified(face.wrapped)
+    if modified.IsEmpty():
+        return [face]
+    return [bd.Face(TopoDS.Face(fragment)) for fragment in modified]
+
+
+def solid_from_faces(
+    faces: list[bd.Face],
+    ref_face: bd.Face,
+    outward: Callable[[bd.Vector], bd.Vector],
+):
+    """Sews faces into a closed Solid. Orientation of the Solid is set via ref_face,
+    whose outward direction at a point p is known to be outward(p).
+    This avoids the costly point classification of ShapeFix_Solid.
+    Raises RuntimeError if the faces don't form a single closed shell."""
+    sewing = BRepBuilderAPI_Sewing()
+    for face in faces:
+        sewing.Add(face.wrapped)
+    sewing.Perform()
+    sewed_shape = sewing.SewedShape()
+    if sewed_shape.ShapeType() != TopAbs_SHELL or sewing.NbFreeEdges() > 0:
+        raise RuntimeError(
+            f"Sewing faces did not result in a closed shell, "
+            f"found {sewing.NbFreeEdges()} free edges."
+        )
+    shell = TopoDS.Shell(sewed_shape)
+    solid = BRepBuilderAPI_MakeSolid(shell).Solid()
+
+    ref_sewn = sewing.Modified(ref_face.wrapped)
+    for face in bd.Solid(solid).faces():
+        if face.wrapped.IsSame(ref_sewn):
+            normal = face.normal_at(0.5, 0.5)
+            if normal.dot(outward(face.position_at(0.5, 0.5))) < 0:
+                solid.Reverse()
+            return bd.Solid(solid)
+
+    # reference face not found, fall back to the slow but robust method
+    return bd.Solid(ShapeFix_Solid().SolidFromShell(shell))
 
 
 def transform2Location(transform: GearTransform):

@@ -321,7 +321,7 @@ def bevel_gear():
 
     gear1.mesh_to(gear2, target_dir=LEFT)
     with BuildPart() as gear1_builder:
-        gear1.build_part()
+        add(gear1.build_part())
         with Locations([gear1.face_location_top]):
             Cylinder(2, 2, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
@@ -339,7 +339,7 @@ def bevel_gear():
             Hole(1, depth=None)
 
     with BuildPart() as gear2_builder:
-        gear2.build_part()
+        add(gear2.build_part())
         with Locations([gear2.face_location_top]):
             Cylinder(4, 4, align=(Align.CENTER, Align.CENTER, Align.MIN))
             Hole(1, depth=None)
@@ -566,4 +566,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gear_backlash(), deviation=0.1, angular_tolerance=0.2)
+    show(bevel_gear(), deviation=0.1, angular_tolerance=0.2)

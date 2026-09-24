@@ -39,7 +39,7 @@ axial_distance_vector = gear1_center_vector - gear2_center_vector
 
 with BuildPart() as gear1_part:
     # creating gear part
-    gear1.build_part()
+    add(gear1.build_part())
     # note: gear1 is moved and rotated to be meshed with gear2 by the mesh_to() method
     # the alignment of the sleeve and pinhole may need to be adjusted
     with Locations((gear1.center_location_top)):
@@ -67,7 +67,7 @@ with BuildPart() as gear1_part:
     )
 
 with BuildPart() as gear2_part:
-    gear2.build_part()
+    add(gear2.build_part())
     with Locations((gear2.center_location_top)):
         # note: location of top-center is aligned with tooth no. 0 of the gear
         # the angle is changed from the helix angle

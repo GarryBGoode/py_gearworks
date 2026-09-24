@@ -25,18 +25,18 @@ wall_thickness = 3
 clearence = 0.1
 
 gear1 = pgw.SpurGear(
-    number_of_teeth=17,
+    number_of_teeth=16,
     module=gearmodule,
     height=gearheight,
-    addendum_coefficient=1.2,
+    addendum_coefficient=1.0,
     profile_shift=0.2,
     z_anchor=0.5,
 )
 gear2 = pgw.SpurRingGear(
-    number_of_teeth=23,
+    number_of_teeth=25,
     module=gearmodule,
     height=gearheight,
-    addendum_coefficient=1.4,
+    addendum_coefficient=1.2,
     dedendum_coefficient=0.8,
     outside_ring_coefficient=2.2,
     profile_shift=0.2,
@@ -45,7 +45,7 @@ gear2 = pgw.SpurRingGear(
 
 
 with BuildPart() as gearpart1:
-    gear1.build_part()
+    add(gear1.build_part())
     with Locations((gear1.center_location_bottom)):
         # notch
         # a rectangular hole on the radius in Y direction
@@ -71,7 +71,7 @@ gearpart1.part.location = gear1.center_location_middle
 
 # ring gear needs no modifications
 with BuildPart() as gearpart2:
-    gear2.build_part()
+    add(gear2.build_part())
 
 gearpart2.part.label = "gear2"
 # set up rendering colors

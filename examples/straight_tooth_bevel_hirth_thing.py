@@ -47,11 +47,11 @@ testgear.shape_recipe.tooth_generator.tooth_angle = lambda z: PI / 4 - 0.04 * z
 testgear.shape_recipe.limits.h_a = 3
 testgear.shape_recipe.limits.h_d = 3
 
-builder = GearBuilder(testgear, n_points_hz=3, n_points_vert=4)
+builder = GearBuilder(testgear, n_points_hz=3, n_points_vert=5)
 part = builder.part_transformed
 # part2 = builder.part_transformed.copy()
 part2 = part.rotate(Axis.X, 180)
 part2 = part2.rotate(Axis.Z, 360 / num_teeth / 2)
 
 
-show(part, part2)
+show(part, part2, deviation=0.01)

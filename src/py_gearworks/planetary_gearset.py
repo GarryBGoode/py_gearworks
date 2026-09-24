@@ -134,6 +134,18 @@ class PlanetaryGearset:
         angles = np.round(pos_ref / increment) * increment
         return angles * np.pi * 2
 
+    def get_planet_directions_distributed(self):
+        """
+        Returns the direction vectors of the planets distributed (close to) evenly around the sun
+        gear, given the number of planets. If even distribution is not possible, the
+        closest possible valid distribution is returned. The directions are unit vectors in the XY plane.
+        """
+        angles = self.get_planet_angles_distributed()
+        directions = np.column_stack(
+            (np.cos(angles), np.sin(angles), np.zeros_like(angles))
+        )
+        return directions
+
     def __willis_equation(self, w_ring, w_carry, w_sun):
         """Willis equation rearranged to zero. Returns zero if the given speeds satisfy
         the equation, otherwise returns the difference."""

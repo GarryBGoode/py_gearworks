@@ -19,6 +19,18 @@ pip install .
 
 py_gearworks CAD model creation uses build123d package: [build123d github](https://github.com/gumyr/build123d)
 
+**compatibility notice**
+
+py_gearworks was designed for algebra-style usage of build123d. If users need it in builder context, please use the `add()` or `insert()` function as so:
+
+```
+with BuildPart() as build_context:
+    add(gear.build_part())
+    ...
+```
+
+Improved support of builder contexts is planned for future releases.
+
 It is highly recommended, though not strictly necessary to use a python-CAD gui solution.
 See [OCP VSCode](https://github.com/bernhard-42/vscode-ocp-cad-viewer) and [CadQuery Editor](https://github.com/CadQuery/CQ-editor).
 

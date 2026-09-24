@@ -556,7 +556,7 @@ def trim_reference_profile(
     pa1 = tooth_curve(1)
     pa2 = tooth_mirror(0)
     center_a = ((pa1 + pa2) / 2 * np.array([0, 0, 1])) * OUT
-    if np.linalg.norm(pa1 - pa2) > 1e-10:
+    if np.linalg.norm(pa1 - pa2) > 1e-8:
         ra_curve = crv.ArcCurve.from_2_point_center(p0=pa1, p1=pa2, center=center_a)
     else:
         ra_curve = crv.ArcCurve(
@@ -570,7 +570,7 @@ def trim_reference_profile(
     pd1 = tooth_curve(0)
     pd2 = tooth_rotate(1)
     center_d = ((pd1 + pd2) / 2 * np.array([0, 0, 1])) * OUT
-    if np.linalg.norm(pd1 - pd2) > 1e-10:
+    if np.linalg.norm(pd1 - pd2) > 1e-8:
         rd_curve = crv.ArcCurve.from_2_point_center(p0=pd2, p1=pd1, center=center_d)
     else:
         rd_curve = crv.ArcCurve(
