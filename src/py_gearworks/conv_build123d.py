@@ -236,10 +236,22 @@ class GearBuilder(GearToNurbs):
             def outward(p: bd.Vector):
                 return bd.Vector(0, 0, cover_bot.z_o - cover_top.z_o)
 
+        # BRepAlgoAPI_BuilderAlgo is OCCT's General Fuse algorithm, the common engine
+        # behind all boolean operations (fuse, cut, common, split). Unlike those, it
+        # does not select or discard anything: it intersects all arguments with each
+        # other and splits every argument into fragments along the intersection
+        # curves. Fragments share the new edges, so they fit together without gaps.
+        # Here it works as a mutual split of faces: side surfaces are cut into parts
+        # below / between / above the covers, and the covers are cut along the tooth
+        # profile. Selecting which fragments to keep is done manually below.
+        # The center faces are included so that their r_o circle edges get merged
+        # with the coinciding edges of the cover rings.
         fuse = BRepAlgoAPI_BuilderAlgo()
         arguments = TopTools_ListOfShape()
-        # side surfaces go in a single compound, so they are not intersected with
-        # each other, only with the covers
+        # Side surfaces go in a single compound argument. OCCT does not compute
+        # interferences between sub-shapes of the same argument, so the side faces
+        # are only intersected with the covers, not with each other (they only touch
+        # along shared edges anyway, which the final sewing takes care of).
         for shape in [bd.Compound(side_surfaces), *cover_faces, *center_faces]:
             arguments.Append(shape.wrapped)
         fuse.SetArguments(arguments)
@@ -764,7 +776,11 @@ def is_beyond_covers(p: bd.Vertex, covers: list[SphereCover], tol: float):
 
 
 def fuse_fragments(fuse: BRepAlgoAPI_BuilderAlgo, face: bd.Face) -> list[bd.Face]:
-    """Fragments of an input face after a general fuse operation."""
+    """Fragments of an input face after a general fuse operation.
+
+    Uses the history of the operation: Modified() lists the fragments an input face
+    was split into, and it is empty when the face was left intact, in which case the
+    face itself is part of the result."""
     if fuse.IsDeleted(face.wrapped):
         return []
     modified = fuse.Modified(face.wrapped)
