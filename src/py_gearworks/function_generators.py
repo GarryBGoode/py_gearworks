@@ -156,7 +156,13 @@ def involute_func(t, r, a=0, rad_offs=0, tan_offs=0, z_offs=0, csph=0):
         return involute_val(t)
 
 
-def involute_circle(t, r=1, angle=0, v_offs=ORIGIN, z_offs=0):
+def involute_circle(
+    t: float,
+    r: float = 1,
+    angle: float = 0,
+    v_offs: np.ndarray = ORIGIN,
+    z_offs: float = 0,
+):
     """
     Returns the x-y-z values of the involute function.
     t: input angle

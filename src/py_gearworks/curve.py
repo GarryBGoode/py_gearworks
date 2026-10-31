@@ -693,6 +693,55 @@ class CurveChain(Curve):
     def is_closed(self):
         return np.linalg.norm(self(0) - self(1)) < DELTA / 100 and self.is_continuous
 
+    def derivative(
+        self, t, direction=0, n=1, delta=DELTA, sharp_edge_discontinuity=True
+    ):
+        """
+        Numerically approximate the curve gradient at t.
+
+        Parameters
+        ----------
+        t: float
+            curve parameter where the derivative is evaluated at.
+        direction: int
+            1: forward, -1: backward, 0: balanced derivative.
+        n: int
+            derivative order (n=2: second derivative, etc.)
+            0 and negative value (integral) does not work.
+        delta: float
+            small value used for numeric differentiation.
+            Hint: consider using larger deltas for higher order derivatives,
+            it is easy to run into floating point issues even on double precision.
+        sharp_edge_discontinuity: bool
+            If True, sharp edges between curve elements will produce discontinuous
+            derivatives. If False, the derivative will have small ramp due to numeric
+            approximation of derivative.
+        """
+
+        def numeric_diff(function, t, direction, delta):
+            if direction == 0:
+                return (function(t + delta) - function(t - delta)) / 2 / delta
+            elif direction > 0:
+                return (function(t + delta) - function(t)) / delta
+            else:
+                return (function(t) - function(t - delta)) / delta
+
+        if sharp_edge_discontinuity:
+            idx, t2 = self.get_s_index(t)
+            curve = self.curves[idx]
+            scale = self.length / curve.length
+            return (
+                curve.derivative(t2, direction=direction, n=n, delta=delta * scale)
+                * scale**n
+            )
+        else:
+            if n <= 1:
+                return numeric_diff(self, t, direction, delta)
+            else:
+                return numeric_diff(
+                    self.derivative(t, direction, n - 1, delta), t, direction, delta
+                )
+
 
 class IntersectMethod(Enum):
     EQUALITY = 1
@@ -1117,6 +1166,16 @@ class LineCurve(Curve):
     def set_end_on(self, s1):
         self.p1 = self(s1)
         self.update_lengths()
+
+
+class PolyLineCurve(CurveChain):
+    """Class to represent a polyline as a Curve."""
+
+    def __init__(self, points=None, active=True, enable_vectorize=False):
+        if points is None:
+            points = []
+        lines = [LineCurve(points[i], points[i + 1]) for i in range(len(points) - 1)]
+        super().__init__(*lines, active=True, enable_vectorize=enable_vectorize)
 
 
 class ArcCurve(Curve):
