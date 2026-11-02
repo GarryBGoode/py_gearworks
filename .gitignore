@@ -34,3 +34,7 @@ venv.bak/
 
 # Docs
 docs/_build/
+
+# claude
+CLAUDE.md
+/design/

@@ -23,26 +23,28 @@ import inspect
 import pytest
 
 
-def test_example():
-    """Test all the examples in the examples.py file. Can't make a passing assertion,
-    except that there should not be any errors when running the examples."""
-    current_dir = os.path.dirname(__file__)
-    relative_path = os.path.join(current_dir, "..", "examples")
-    sys.path.append(relative_path)
+def _example_functions():
+    """Return all functions defined in examples/examples.py."""
+    examples_dir = os.path.join(os.path.dirname(__file__), "..", "examples")
+    sys.path.append(examples_dir)
 
     import examples
 
-    # Get all functions from the examples module
-    example_functions = [
+    return [
         func
         for name, func in inspect.getmembers(examples, inspect.isfunction)
         if func.__module__ == "examples"
     ]
 
-    # Call each example function
-    for func in example_functions:
-        print(f"Running {func.__name__}...")
+
+@pytest.mark.parametrize("func", _example_functions(), ids=lambda f: f.__name__)
+def test_example(func):
+    """Test each example in the examples.py file. Can't make a passing assertion,
+    except that there should not be any errors when running the example."""
+    try:
         func()
+    finally:
+        plt.close("all")
 
 def _example_scripts():
     """Return all standalone example scripts, excluding examples.py which is
@@ -77,5 +79,7 @@ def test_doctest():
 
 
 if __name__ == "__main__":
-    test_example()
+    for func in _example_functions():
+        print(f"Running {func.__name__}...")
+        test_example(func)
     test_doctest()
