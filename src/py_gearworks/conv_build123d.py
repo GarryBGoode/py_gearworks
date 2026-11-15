@@ -28,6 +28,7 @@ from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism
 from OCP.ShapeFix import ShapeFix_Face, ShapeFix_Solid
 from OCP.TopAbs import TopAbs_SHELL
 from OCP.TopoDS import TopoDS
+
 try:
     # OCP >= 8.0 (OCCT 8) moved the NCollection list bindings to OCP.collections
     from OCP.collections import List_TopoDS_Shape as TopTools_ListOfShape
@@ -854,13 +855,9 @@ def generate_boundary_edges(
 
     curves = []
     for i in range(N):
-        # angle = i * profile.pitch_angle
-        curves.extend(
-            [
-                nurb.apply_transform(transform)
-                for nurb in nurb_profile.profile.copy().get_curves()
-            ]
-        )
+        for nurb in nurb_profile.profile.copy().get_curves():
+            if nurb.active:
+                curves.extend([nurb.apply_transform(transform)])
         transform.angle += nurbprofile.pitch_angle
 
     nurbs_curve = crv.NURBSCurve(*curves)

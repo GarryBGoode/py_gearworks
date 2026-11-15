@@ -52,7 +52,79 @@ def test_rotation():
 @pytest.mark.parametrize("conic", [False, True])
 @pytest.mark.parametrize("cycloid", [False, True])
 @pytest.mark.parametrize("profile_shift", [0, 0.3])
+@pytest.mark.slow
 def test_gear_intersect(
+    num_teeth,
+    module,
+    angle_ref,
+    root_fillet,
+    tip_fillet,
+    conic,
+    cycloid,
+    profile_shift,
+):
+    """Full cartesian matrix of check_gear_intersect()."""
+    check_gear_intersect(
+        num_teeth,
+        module,
+        angle_ref,
+        root_fillet,
+        tip_fillet,
+        conic,
+        cycloid,
+        profile_shift,
+    )
+
+
+# Curated subset of the test_gear_intersect matrix: every parameter value appears at
+# least once, plus the hard combinations (small z with undercut, bevel, cycloid).
+# fmt: off
+_INTERSECT_CURATED = [
+    # num_teeth, module, angle_ref, root_fillet, tip_fillet, conic, cycloid, shift
+    pytest.param(8, 2, 0.0, -1, 0.0, False, False, 0.3, id="inv-z8-undercut-shift"),
+    pytest.param(13, 0.5, 0.25, 0.1, 0.1, False, False, 0, id="inv-z13-fillets"),
+    pytest.param(25, 2, 0.5, 0.4, 0.4, False, False, 0.3, id="inv-z25-bigfillets-shift"),
+    pytest.param(62, 0.5, 0.75, 0, 0.0, False, False, 0, id="inv-z62-sharp"),
+    pytest.param(121, 2, 1.0, 0, 0.4, False, False, 0.3, id="inv-z121-tipfillet-shift"),
+    pytest.param(8, 0.5, 0.5, -1, 0.1, True, False, 0, id="bevel-z8-undercut"),
+    pytest.param(25, 2, 0.0, 0.1, 0.0, True, False, 0, id="bevel-z25-rootfillet"),
+    pytest.param(62, 2, 0.25, 0.4, 0.4, True, False, 0, id="bevel-z62-fillets"),
+    pytest.param(8, 2, 0.75, -1, 0.0, False, True, 0, id="cyc-z8-small-rc"),
+    pytest.param(25, 0.5, 0.0, 0.1, 0.1, False, True, 0, id="cyc-z25-fillets"),
+    pytest.param(13, 2, 1.0, 0, 0.4, True, True, 0, id="cycbevel-z13-tipfillet"),
+    pytest.param(121, 0.5, 0.5, 0.4, 0.0, True, True, 0, id="cycbevel-z121-rootfillet"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "num_teeth, module, angle_ref, root_fillet, tip_fillet, conic, cycloid, "
+    "profile_shift",
+    _INTERSECT_CURATED,
+)
+def test_gear_intersect_curated(
+    num_teeth,
+    module,
+    angle_ref,
+    root_fillet,
+    tip_fillet,
+    conic,
+    cycloid,
+    profile_shift,
+):
+    check_gear_intersect(
+        num_teeth,
+        module,
+        angle_ref,
+        root_fillet,
+        tip_fillet,
+        conic,
+        cycloid,
+        profile_shift,
+    )
+
+
+def check_gear_intersect(
     num_teeth,
     module,
     angle_ref,
@@ -225,7 +297,82 @@ def test_gear_intersect(
 @pytest.mark.parametrize("conic", [False, True])
 @pytest.mark.parametrize("cycloid", [False, True])
 @pytest.mark.parametrize("inside_ring", [False, True])
+@pytest.mark.slow
 def test_CAD(
+    num_teeth,
+    module,
+    beta,
+    height,
+    root_fillet,
+    tip_fillet,
+    conic,
+    cycloid,
+    inside_ring,
+):
+    """Full cartesian matrix of check_CAD()."""
+    check_CAD(
+        num_teeth,
+        module,
+        beta,
+        height,
+        root_fillet,
+        tip_fillet,
+        conic,
+        cycloid,
+        inside_ring,
+    )
+
+
+# Curated subset of the test_CAD matrix: every parameter value appears at least once,
+# with emphasis on combinations the gear cases (gear_cases.py) don't cover: helical
+# and cycloid rings, spiral bevels, cycloid bevels.
+# fmt: off
+_CAD_CURATED = [
+    # num_teeth, module, beta, height, root_fillet, tip_fillet, conic, cycloid, ring
+    pytest.param(8, 0.5, 0, 0.5, -1, 0, False, False, False, id="inv-z8-undercut"),
+    pytest.param(21, 2, PI / 6, 1.5, 0.3, 0.25, False, False, False, id="helical-z21-fillets"),
+    pytest.param(55, 0.5, PI / 6, 0.5, 0, 0.25, False, False, True, id="helical-ring-z55"),
+    pytest.param(104, 2, 0, 1.5, -1, 0, False, False, True, id="ring-z104-undercut"),
+    pytest.param(8, 2, PI / 6, 1.5, 0, 0.25, True, False, False, id="spiralbevel-z8"),
+    pytest.param(55, 0.5, 0, 0.5, 0.3, 0, True, False, False, id="bevel-z55-rootfillet"),
+    pytest.param(55, 2, PI / 6, 1.5, -1, 0.25, True, False, True, id="spiralbevel-ring-z55"),
+    pytest.param(21, 0.5, PI / 6, 1.5, -1, 0, False, True, False, id="cyc-helical-z21-small-rc"),
+    pytest.param(104, 2, 0, 0.5, 0.3, 0.25, False, True, True, id="cyc-ring-z104"),
+    pytest.param(21, 2, 0, 0.5, 0, 0, True, True, False, id="cycbevel-z21"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "num_teeth, module, beta, height, root_fillet, tip_fillet, conic, cycloid, "
+    "inside_ring",
+    _CAD_CURATED,
+)
+def test_CAD_curated(
+    num_teeth,
+    module,
+    beta,
+    height,
+    root_fillet,
+    tip_fillet,
+    conic,
+    cycloid,
+    inside_ring,
+):
+    check_CAD(
+        num_teeth,
+        module,
+        beta,
+        height,
+        root_fillet,
+        tip_fillet,
+        conic,
+        cycloid,
+        inside_ring,
+    )
+
+
+def check_CAD(
     num_teeth,
     module,
     beta,
@@ -320,7 +467,7 @@ def test_CAD(
 
 if __name__ == "__main__":
 
-    test_gear_intersect(
+    check_gear_intersect(
         num_teeth=121,
         module=2,
         angle_ref=np.float64(1.0),

@@ -14,7 +14,19 @@ import py_gearworks as pgw
 import pytest as pytest
 import numpy as np
 
+from gear_cases import GEAR_CASE_PAIRS, build_pair, pair_id
 
+
+@pytest.mark.parametrize("pair", GEAR_CASE_PAIRS, ids=pair_id)
+def test_contact_ratio_cases(pair):
+    """Contact ratio of the representative pairs. mesh_to() is due for a rework,
+    so this checks only that the calculation runs and gives a plausible value."""
+    gear1, gear2 = build_pair(pair)
+    contact_ratio = pgw.get_contact_ratio_2D(gear1, gear2, z_ratio=1.0)
+    assert contact_ratio > 0.1
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("num_teeth_1", [8, 55])
 @pytest.mark.parametrize("num_teeth_2", [21, 33])
 @pytest.mark.parametrize("module", [0.5, 2])  # test if module is used correctly

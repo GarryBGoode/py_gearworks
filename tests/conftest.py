@@ -1,0 +1,27 @@
+# Copyright 2026 Gergely Bencsik
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import pytest
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-snapshots",
+        action="store_true",
+        default=False,
+        help="Regenerate geometry snapshots (tests/snapshots) instead of comparing.",
+    )
+
+
+@pytest.fixture
+def update_snapshots(request):
+    """True when snapshots should be (re)written instead of compared."""
+    return request.config.getoption("--update-snapshots")

@@ -87,7 +87,10 @@ profile = "black"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --doctest-modules"
+addopts = "-ra -q --doctest-modules -m 'not slow'"
+markers = [
+    "slow: full cartesian parameter matrices, deselected by default; run manually with -m slow",
+]
 testpaths = ["tests"]
 pythonpath = "src"
 
