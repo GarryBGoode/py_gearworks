@@ -2551,6 +2551,8 @@ class InvoluteRack:
         # if module = 1 then linear pitch is PI
         # since gear circumference is D*PI = module * Z * PI = Z*pitch
         # pitch = module*PI = PI
+
+        # Origin is on the pitch point
         pitch = PI
 
         backlash_value = self.backlash / (2 * np.cos(self.pressure_angle))
@@ -2630,7 +2632,9 @@ class InvoluteRack:
 
         # Apply transformations to position, orient and scale the rack
         self.part_transformed = self.part.translate(self.offset * UP * pitch)
-        self.part_transformed = self.part_transformed.scale(self.module)
+        self.part_transformed = self.part_transformed.scale(
+            self.module, about=bd.Vector(0, 0, 0)
+        )
         rot1 = scp_Rotation.from_matrix(self.orientation)
         degrees = rot1.as_euler("zyx", degrees=True)
         self.part_transformed = (

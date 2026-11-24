@@ -62,8 +62,10 @@ def spur_gears():
 
 
 def gear_and_rack():
+    module = 1
     gear1 = HelicalGear(
         number_of_teeth=13,
+        module=module,
         helix_angle=PI / 6,
         height=10,
         profile_shift=0.3,
@@ -71,6 +73,7 @@ def gear_and_rack():
     )
     rack1 = HelicalRack(
         number_of_teeth=40,
+        module=module,
         helix_angle=PI / 6,
         height=12,
         herringbone=True,
@@ -80,9 +83,9 @@ def gear_and_rack():
     # automatic alignment of herringbone geometry is not supported yet
     rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-1)
 
-    gear2 = SpurGear(number_of_teeth=20, height=10, backlash=0.05)
+    gear2 = SpurGear(number_of_teeth=20, module=module, height=10, backlash=0.05)
     gear2.center = LEFT * 50
-    rack2 = InvoluteRack(number_of_teeth=40, height=14, backlash=0.05)
+    rack2 = InvoluteRack(number_of_teeth=40, module=module, height=14, backlash=0.05)
     # offset parameter moves the rack further along
     # axial offset shifts rack relative to gear's axial direction
     rack2.mesh_to(
@@ -566,4 +569,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(bevel_gear(), deviation=0.1, angular_tolerance=0.2)
+    show(gear_and_rack(), deviation=0.1, angular_tolerance=0.2)
