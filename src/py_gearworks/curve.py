@@ -1077,8 +1077,10 @@ class LineCurve(Curve):
     """Class to represent a line as a Curve."""
 
     def __init__(self, p0=ORIGIN, p1=ORIGIN, active=True, enable_vectorize=False):
-        self.p0 = p0
-        self.p1 = p1
+        # own copies: callers pass constants (UP, ORIGIN, ...) and trims / in-place
+        # moves of the end points must not write through to them
+        self.p0 = np.array(p0, dtype=float)
+        self.p1 = np.array(p1, dtype=float)
         super().__init__(
             self.line_func,
             active,
@@ -1100,6 +1102,16 @@ class LineCurve(Curve):
         self.length = np.linalg.norm(self.p1 - self.p0) * np.abs(self.t_1 - self.t_0)
         self.t2s_lookup["s"] = np.array([0, 1])
         self.t2s_lookup["t"] = np.array([self.t_0, self.t_1])
+
+    def reverse(self):
+        """Reverse the line in place by swapping its end points.
+
+        LineCurve trims by moving p0 and p1 (see set_start_on), which assumes p0 is
+        the start. Swapping t_0 and t_1 instead would break that."""
+        self.p0, self.p1 = self.p1, self.p0
+        self.update_lengths()
+        # returns self like Curve.reverse(), callers chain .copy().reverse()
+        return self
 
     def transform(self, transform: callable) -> "LineCurve":
         p0 = transform(self.p0)

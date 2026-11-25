@@ -826,12 +826,20 @@ class InvoluteGear(GearInfoMixin):
             Default is 0.0.
         """
 
-        if (
-            np.abs(self.inputparam.pressure_angle + other.inputparam.pressure_angle)
-            < 1e-6
-        ):
+        def normal_pressure_angle(gear):
+            # cylindrical gears store the transverse angle,
+            # tan(a_t) = tan(a_n) / cos(beta); bevel gears store the input angle as is
+            param = gear.inputparam
+            if gear.cone_angle != 0:
+                return param.pressure_angle
+            return np.arctan(np.tan(param.pressure_angle) * np.cos(param.helix_angle))
+
+        pa_self = normal_pressure_angle(self)
+        pa_other = normal_pressure_angle(other)
+        if np.abs(pa_self - pa_other) > 1e-6:
             raise ValueError(
-                f"Gears must have the same pressure angle to mesh. pressure angle of this: {self.inputparam.pressure_angle}, pressure angle of other: {other.inputparam.pressure_angle}"
+                "Gears must have the same (normal) pressure angle to mesh. "
+                f"Pressure angle of this: {pa_self}, of other: {pa_other}"
             )
 
         if backlash is None:
@@ -1337,7 +1345,7 @@ class HelicalGear(InvoluteGear):
             self.gearcore.shape_recipe.transform.angle = herringbone_mod
 
         # correct for too much twist
-        z_samples = np.linspace(self.gearcore.z_vals[0], self.gearcore.z_vals[1], 20)
+        z_samples = np.linspace(self.gearcore.z_vals[0], self.gearcore.z_vals[-1], 20)
         angle_samples = [
             self.gearcore.shape_recipe(z).transform.angle for z in z_samples
         ]
@@ -2679,6 +2687,12 @@ class InvoluteRack:
         axial_offset: float
             Axial offset of the rack in the gear's axial direction. Default is 0.
         """
+
+        if np.abs(self.beta_angle - gear.beta) > DELTA:
+            raise NotImplementedError(
+                "Helix angle of gear-rack combination must match. "
+                "Crossed helical rack alignment not supported."
+            )
         #
         # mult from right: vector in gear's coordinate orientation
         angle_of_target_dir = angle_of_vector_in_xy(
@@ -2706,14 +2720,11 @@ class InvoluteRack:
         )
 
         axial_vector = gear.gearcore.transform.z_axis * axial_offset
-        other_angle_offset = gear.gearcore.shape_recipe(
-            gear.offset_to_z(axial_offset)
-        ).transform.angle
 
         # Shift adjustment due to angle bias needs correction from total backlash
         shift_adjust = (
             angle_bias * backlash * gear.module / (2 * np.cos(self.pressure_angle))
-            + np.tan(gear.beta) * other_angle_offset * gear.pitch_radius
+            + np.tan(self.beta_angle) * axial_offset
         )
         target_dir_norm = np.cross(gear.gearcore.transform.z_axis, target_dir_proj)
 
@@ -2883,7 +2894,9 @@ class HelicalRack(InvoluteRack):
 
         # Apply transformations to position, orient and scale the rack
         self.part_transformed = self.part.translate(self.offset * UP * pitch)
-        self.part_transformed = self.part_transformed.scale(self.module)
+        self.part_transformed = self.part_transformed.scale(
+            self.module, about=bd.Vector(0, 0, 0)
+        )
         rot1 = scp_Rotation.from_matrix(self.orientation)
         degrees = rot1.as_euler("zyx", degrees=True)
         self.part_transformed = (

@@ -12,11 +12,17 @@
 
 import dataclasses
 import copy
+import warnings
+from typing import Callable
 import py_gearworks.curve as crv
 import numpy as np
 from py_gearworks.defs import *
+from scipy.optimize import brentq, minimize_scalar
 from scipy.spatial.transform import Rotation as scp_Rotation
-from py_gearworks.function_generators import angle_between_vector_and_plane
+from py_gearworks.function_generators import (
+    angle_between_vectors,
+    normalize_vector,
+)
 
 # If a dataclass tends to be user input, it should be named param.
 # If a dataclass tends to be generated or manipulated by functions,
@@ -613,42 +619,99 @@ class GearToothConicGenerator(GearToothGenerator):
             )
 
     def check_lower_curve_limit(self, tooth_curve: crv.Curve) -> crv.Curve:
+        """Trim or extend the bottom of a spherical tooth flank to the dedendum cone.
+
+        The flank is followed downward from s=0 (towards the cone axis). If it
+        crosses the dedendum cone, it is trimmed there. If it turns back before
+        reaching it (cusp, e.g. the octoid "base circle"), it is cut at the turning
+        point and extended to the dedendum cone with a meridian great-circle arc.
+        """
         if self.cone_angle == 0:
             return super().check_lower_curve_limit(tooth_curve)
-        else:
-            gamma = self.conic_data.gamma
-            R = self.conic_data.R
-            h_d_angle = PI / 2 - gamma + self.ref_limits.h_d / R
-            z_center = R * np.cos(gamma)
-            h_d_point = crv.find_curve_plane_intersect(
-                tooth_curve,
-                plane_normal=scp_Rotation.from_euler("y", h_d_angle).apply(OUT),
-                offset=z_center * OUT,
-                guess=0,
-            )
-            if not h_d_point.success:
-                h_d_point = crv.find_curve_plane_intersect(
-                    tooth_curve,
-                    plane_normal=scp_Rotation.from_euler("y", h_d_angle).apply(OUT),
-                    offset=z_center * OUT,
-                    method=crv.IntersectMethod.MINDISTANCE,
-                    guess=0,
-                )
-                tooth_curve.set_start_on(h_d_point.x[0])
-                bottom_angle = np.abs(
-                    angle_between_vector_and_plane(tooth_curve(0), OUT) - h_d_angle
-                )
-                connector_curve = crv.ArcCurve.from_point_center_angle(
-                    p0=tooth_curve(0),
-                    center=OUT * R * np.cos(gamma),
-                    angle=bottom_angle,
-                    axis=UP,
-                )
-                connector_curve.reverse()
-                return crv.CurveChain(connector_curve, tooth_curve)
-            else:
-                tooth_curve.set_start_on(h_d_point.x[0])
-                return tooth_curve
+
+        cone = self.conic_data
+        # mirror z for negative cones so the apex is always above, axis points down
+        z_comp = np.array([1, 1, np.sign(self.cone_angle)])
+        apex = cone.center_untransformed * z_comp
+        polar_d = np.abs(cone.gamma) - self.ref_limits.h_d / cone.R
+
+        def polar_angle(s):
+            return angle_between_vectors(tooth_curve(s) * z_comp - apex, IN)
+
+        s_bottom, reached = find_flank_lower_limit(polar_angle, polar_d)
+        tooth_curve.set_start_on(s_bottom)
+        if reached:
+            return tooth_curve
+
+        # extend along the meridian: rotate the end point about the apex, towards
+        # the axis, until it lies on the dedendum cone
+        p_flank = tooth_curve(0) * z_comp - apex
+        rot_axis = normalize_vector(np.cross(p_flank, IN))
+        p_bottom = scp_Rotation.from_rotvec(
+            rot_axis * (polar_angle(0) - polar_d)
+        ).apply(p_flank)
+        connector_curve = crv.ArcCurve.from_2_point_center(
+            p0=(p_bottom + apex) * z_comp,
+            p1=tooth_curve(0),
+            center=apex * z_comp,
+        )
+        return crv.CurveChain(connector_curve, tooth_curve)
+
+
+def find_flank_lower_limit(
+    polar_angle: Callable[[float], float],
+    polar_d: float,
+    step: float = 0.05,
+    s_limit: float = -5.0,
+) -> tuple[float, bool]:
+    """Find where a descending spherical flank reaches the dedendum cone.
+
+    The flank is followed from s=0 towards negative s, as long as its polar angle
+    (measured from the cone axis, at the apex) keeps decreasing. Past a turning
+    point the curve (or its extrapolation) is not part of the tooth, so solutions
+    there are not accepted.
+
+    Parameters
+    ----------
+    polar_angle : Callable[[float], float]
+        Polar angle of the flank point at curve parameter s.
+    polar_d : float
+        Polar angle of the dedendum cone.
+    step : float
+        Sampling step in s for bracketing.
+    s_limit : float
+        Lowest s searched.
+
+    Returns
+    -------
+    tuple[float, bool]
+        Curve parameter s of the lower limit, and whether the dedendum cone was
+        reached (True) or the flank turned back first (False, s is the turning
+        point).
+    """
+
+    def f(s):
+        return polar_angle(s) - polar_d
+
+    if f(0) <= 0:
+        # flank starts already below the dedendum, keep it as is
+        return 0.0, True
+    s_values = np.arange(0, s_limit - step / 2, -step)
+    f_values = np.array([f(s) for s in s_values])
+    for k in range(1, len(s_values)):
+        if f_values[k] <= 0:
+            s_root = brentq(f, s_values[k], s_values[k - 1])
+            return s_root, True
+        if f_values[k] > f_values[k - 1]:
+            # turning point between s[k] and s[k-2]
+            s_hi = s_values[max(k - 2, 0)]
+            sol = minimize_scalar(f, bounds=(s_values[k], s_hi), method="bounded")
+            return sol.x, False
+    warnings.warn(
+        "Tooth flank lower limit search did not converge, the dedendum may be wrong.",
+        stacklevel=2,
+    )
+    return s_values[-1], False
 
 
 class RackToothGenerator(ZFunctionMixin):

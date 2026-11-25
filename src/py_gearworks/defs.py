@@ -47,5 +47,11 @@ OUT = np.array((0.0, 0.0, 1.0)).reshape(VSHAPE)
 
 UNIT3X3 = np.eye(3)
 
+# The constants are shared by the whole package: read-only, so an accidental in-place
+# change (e.g. `p += diff` on an aliased UP) fails instead of moving every user.
+for _const in (ORIGIN, UP, DOWN, RIGHT, LEFT, IN, OUT, UNIT3X3):
+    _const.flags.writeable = False
+del _const
+
 # Labels
 LABEL_INVOLUTE_FLANK = "involute_flank"

@@ -121,6 +121,9 @@ class GearToNurbs:
                         if curve.active
                     ]
                 )
+                # close segment joints the same way the covers do
+                # (cover_profile_curve), so cover and side surface edges coincide
+                nurb.enforce_continuity()
                 stack.append(nurb)
 
             # axis 0: vertical, axis 1: horizontal, axis 2: x-y-z-w
@@ -155,6 +158,13 @@ class GearToNurbs:
                     n_points_vert=self.n_points_vert,
                     t_weight=0.01,
                     init_points=init_data,
+                )
+                points2, weights2 = refit_columns_lstsq(
+                    points_combined,
+                    points2,
+                    weights2,
+                    t,
+                    seam_columns(stack[0].knots),
                 )
 
                 surface_data.append(
@@ -261,6 +271,56 @@ class GearToNurbs:
         logging.debug(f"Final cost: {sol.fun}")
         logging.debug(f"message: {sol.message}")
         return sol, points_out, weights_out
+
+
+def seam_columns(knots: np.ndarray) -> list[int]:
+    """Control point columns of the side surface that meet a column of another
+    surface instead of a shared one.
+
+    The closed profile ends with 3 closing segments (ro connectors and ro curve).
+    The tooth part (all but the closing segments, see GearBuilder.gen_side_surfaces)
+    is repeated per tooth, so its last column meets the first column of the next
+    tooth. The last column of the closed profile meets the first column."""
+    return sorted({knots[0], knots[-4], knots[-1]})
+
+
+def refit_columns_lstsq(
+    target_points: np.ndarray,
+    points: np.ndarray,
+    weights: np.ndarray,
+    t: np.ndarray,
+    columns: list[int],
+):
+    """Re-solves the inner control rows of the given columns by linear least squares
+    for the fixed sample parameters t.
+
+    Columns at seams are fitted separately but must match their partner column
+    (e.g. the first column of the next tooth). The iterative fit stops at a different
+    point for each, the flat directions of a high degree fit turn roundoff into
+    1e-5 scale mismatches along the seam. For fixed t the fit is linear in the
+    control points, and lstsq returns its optimum, so the partner columns come out
+    equal up to roundoff times the condition number. Given t, the cost is a sum over
+    columns, so this only lowers the cost of the refitted columns and leaves the rest
+    of the fit as it was.
+
+    target_points: (n_slices, n_columns, 4) slice points, x-y-z-w
+    points, weights: fitted surface, (m, n_columns, 3) and (m, n_columns)
+    t: parameters of the inner slices, (n_slices - 2,)
+    Returns new (points, weights) arrays."""
+    m = points.shape[0]
+    if m < 3 or len(columns) == 0:
+        return points, weights
+    basis = bezier_diff_p(t, m)  # (n_slices - 2, m)
+    targets = target_points[1:-1][:, columns, :].reshape(len(t), -1)
+    end_rows = target_points[[0, -1]][:, columns, :].reshape(2, -1)
+    rhs = targets - basis[:, [0, -1]] @ end_rows
+    inner = np.linalg.lstsq(basis[:, 1:-1], rhs, rcond=None)[0]
+    inner = inner.reshape(m - 2, len(columns), 4)
+    points = points.copy()
+    weights = weights.copy()
+    points[1:-1, columns, :] = inner[..., :3]
+    weights[1:-1, columns] = inner[..., 3]
+    return points, weights
 
 
 @dataclasses.dataclass

@@ -62,25 +62,24 @@ def spur_gears():
 
 
 def gear_and_rack():
-    module = 1
+    module = 2
     gear1 = HelicalGear(
         number_of_teeth=13,
         module=module,
-        helix_angle=PI / 6,
+        helix_angle=-PI / 6,
         height=10,
         profile_shift=0.3,
-        herringbone=True,
+        herringbone=False,
     )
     rack1 = HelicalRack(
         number_of_teeth=40,
         module=module,
-        helix_angle=PI / 6,
+        helix_angle=-PI / 6,
         height=12,
-        herringbone=True,
+        herringbone=False,
     )
     # racks can mesh to gears, but gears can't (yet) mesh to racks
     # axial offset used to center the rack, adjust for different heights (10 vs 12)
-    # automatic alignment of herringbone geometry is not supported yet
     rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-1)
 
     gear2 = SpurGear(number_of_teeth=20, module=module, height=10, backlash=0.05)
@@ -185,7 +184,7 @@ def helical_gears():
     gear0 = HelicalGear(number_of_teeth=12, helix_angle=0, height=15, z_anchor=0.5)
     gear1 = HelicalGear(number_of_teeth=12, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear2 = HelicalGear(number_of_teeth=24, helix_angle=0, height=15, z_anchor=0.5)
-    gear3 = HelicalGear(number_of_teeth=12, helix_angle=PI / 4, height=15, z_anchor=0.5)
+    gear3 = HelicalGear(number_of_teeth=7, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear4 = HelicalGear(number_of_teeth=24, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear1.mesh_to(gear2, target_dir=LEFT)
     gear0.mesh_to(gear1, target_dir=LEFT)
