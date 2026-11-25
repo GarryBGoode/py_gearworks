@@ -255,7 +255,7 @@ def cycloid_cone(t, rb=1, rc=1, C=0.5, angle=0, v_offs=ORIGIN, z_offs=0):
     z_offs: offset value applied in the z direction
     """
     if C == 0:
-        return cycloid_circle(t, r, angle, v_offs)
+        return cycloid_circle(t, rb, rc, angle, v_offs, z_offs)
     else:
         rot_z = scp_Rotation.from_euler("z", t + angle)
 
@@ -665,6 +665,9 @@ def octoid(
     The point is calculated based on the octoidal involute geometry, taking into account
     the base radius, sphere radius, pressure angle, and rotation angle.
     """
+    if np.any(np.asarray(v_offs) != 0):
+        # v_offs is kept for a signature common with the other flank functions
+        raise NotImplementedError("octoid() does not support v_offs")
     # taken from Giorgio Figliolini:
     # Algorithms for Involute and Octoidal Bevel-Gear Generation
     # DOI: 10.1115/1.1900147
@@ -716,7 +719,7 @@ def octoid(
     v = np.array([v0, v1, v2]) * R
 
     rot = scp_Rotation.from_euler("yz", angles=[PI, PI / 2 + angle])
-    zshift = np.sqrt(sphere_rad**2 - base_rad**2)
+    zshift = np.sqrt(sphere_rad**2 - base_rad**2) + z_offs
     v = rot.apply(v)
     return v + zshift * OUT
 

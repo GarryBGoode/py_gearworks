@@ -188,13 +188,13 @@ def generate_reference_lines(
 ) -> RackRefLines:
     pitch_line = crv.LineCurve(p0=UP, p1=DOWN)
     addendum_line = crv.LineCurve(
-        p0=UP + RIGHT * limitparam.h_a, p1=UP + RIGHT * limitparam.h_a
+        p0=UP + RIGHT * limitparam.h_a, p1=DOWN + RIGHT * limitparam.h_a
     )
     dedendum_line = crv.LineCurve(
-        p0=UP - RIGHT * limitparam.h_d, p1=UP - RIGHT * limitparam.h_d
+        p0=UP - RIGHT * limitparam.h_d, p1=DOWN - RIGHT * limitparam.h_d
     )
     outside_line = crv.LineCurve(
-        p0=UP - RIGHT * limitparam.h_o, p1=UP - RIGHT * limitparam.h_o
+        p0=UP - RIGHT * limitparam.h_o, p1=DOWN - RIGHT * limitparam.h_o
     )
 
     return RackRefLines(

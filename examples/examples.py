@@ -62,27 +62,28 @@ def spur_gears():
 
 
 def gear_and_rack():
+    module = 2
     gear1 = HelicalGear(
         number_of_teeth=13,
-        helix_angle=PI / 6,
+        module=module,
+        helix_angle=-PI / 6,
         height=10,
         profile_shift=0.3,
-        herringbone=True,
     )
     rack1 = HelicalRack(
         number_of_teeth=40,
-        helix_angle=PI / 6,
-        height=12,
-        herringbone=True,
+        module=module,
+        helix_angle=-PI / 6,
+        height=14,
     )
     # racks can mesh to gears, but gears can't (yet) mesh to racks
-    # axial offset used to center the rack, adjust for different heights (10 vs 12)
-    # automatic alignment of herringbone geometry is not supported yet
-    rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-1)
+    # axial offset can be used to adjust the vertical alignment of the rack relative to the gear
+    # now slightly off-center
+    rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-3)
 
-    gear2 = SpurGear(number_of_teeth=20, height=10, backlash=0.05)
+    gear2 = SpurGear(number_of_teeth=20, module=module, height=10, backlash=0.05)
     gear2.center = LEFT * 50
-    rack2 = InvoluteRack(number_of_teeth=40, height=14, backlash=0.05)
+    rack2 = InvoluteRack(number_of_teeth=40, module=module, height=14, backlash=0.05)
     # offset parameter moves the rack further along
     # axial offset shifts rack relative to gear's axial direction
     rack2.mesh_to(
@@ -182,7 +183,7 @@ def helical_gears():
     gear0 = HelicalGear(number_of_teeth=12, helix_angle=0, height=15, z_anchor=0.5)
     gear1 = HelicalGear(number_of_teeth=12, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear2 = HelicalGear(number_of_teeth=24, helix_angle=0, height=15, z_anchor=0.5)
-    gear3 = HelicalGear(number_of_teeth=12, helix_angle=PI / 4, height=15, z_anchor=0.5)
+    gear3 = HelicalGear(number_of_teeth=7, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear4 = HelicalGear(number_of_teeth=24, helix_angle=PI / 4, height=15, z_anchor=0.5)
     gear1.mesh_to(gear2, target_dir=LEFT)
     gear0.mesh_to(gear1, target_dir=LEFT)
@@ -566,4 +567,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(bevel_gear(), deviation=0.1, angular_tolerance=0.2)
+    show(gear_and_rack(), deviation=0.1, angular_tolerance=0.2)

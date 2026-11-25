@@ -804,6 +804,8 @@ class InvoluteGear(GearInfoMixin):
         axial_offset: float = 0.0,
     ):
         """Aligns this gear to another gear object.
+        Raises ValueError when pressure angles of the gears do not match.
+
         Parameters
         ----------
         other: InvoluteGear
@@ -826,12 +828,20 @@ class InvoluteGear(GearInfoMixin):
             Default is 0.0.
         """
 
-        if (
-            np.abs(self.inputparam.pressure_angle + other.inputparam.pressure_angle)
-            < 1e-6
-        ):
+        def normal_pressure_angle(gear):
+            # cylindrical gears store the transverse angle,
+            # tan(a_t) = tan(a_n) / cos(beta); bevel gears store the input angle as is
+            param = gear.inputparam
+            if gear.cone_angle != 0:
+                return param.pressure_angle
+            return np.arctan(np.tan(param.pressure_angle) * np.cos(param.helix_angle))
+
+        pa_self = normal_pressure_angle(self)
+        pa_other = normal_pressure_angle(other)
+        if np.abs(pa_self - pa_other) > 1e-6:
             raise ValueError(
-                f"Gears must have the same pressure angle to mesh. pressure angle of this: {self.inputparam.pressure_angle}, pressure angle of other: {other.inputparam.pressure_angle}"
+                "Gears must have the same (normal) pressure angle to mesh. "
+                f"Pressure angle of this: {pa_self}, of other: {pa_other}"
             )
 
         if backlash is None:
@@ -1337,7 +1347,7 @@ class HelicalGear(InvoluteGear):
             self.gearcore.shape_recipe.transform.angle = herringbone_mod
 
         # correct for too much twist
-        z_samples = np.linspace(self.gearcore.z_vals[0], self.gearcore.z_vals[1], 20)
+        z_samples = np.linspace(self.gearcore.z_vals[0], self.gearcore.z_vals[-1], 20)
         angle_samples = [
             self.gearcore.shape_recipe(z).transform.angle for z in z_samples
         ]
@@ -2547,10 +2557,12 @@ class InvoluteRack:
         self.backlash = backlash
 
     def _build_ref_tooth_face(self) -> bd.Face:
-        # defautl construction convention: module = 1
+        # default construction convention: module = 1
         # if module = 1 then linear pitch is PI
         # since gear circumference is D*PI = module * Z * PI = Z*pitch
         # pitch = module*PI = PI
+
+        # Origin is on the pitch point
         pitch = PI
 
         backlash_value = self.backlash / (2 * np.cos(self.pressure_angle))
@@ -2630,7 +2642,9 @@ class InvoluteRack:
 
         # Apply transformations to position, orient and scale the rack
         self.part_transformed = self.part.translate(self.offset * UP * pitch)
-        self.part_transformed = self.part_transformed.scale(self.module)
+        self.part_transformed = self.part_transformed.scale(
+            self.module, about=bd.Vector(0, 0, 0)
+        )
         rot1 = scp_Rotation.from_matrix(self.orientation)
         degrees = rot1.as_euler("zyx", degrees=True)
         self.part_transformed = (
@@ -2653,15 +2667,15 @@ class InvoluteRack:
         axial_offset: float = 0,
     ):
         """Aligns this rack to a gear object.
+        Beta angle (if helical variant) of gear and rack must match.
 
-        Arguments
-        ---------
-        other: InvoluteGear
+        Parameters
+        ----------
+        gear: InvoluteGear
             The other gear object to align to.
         target_dir: np.ndarray
             The direction in which this rack should be placed in relation to the other
-            gear.
-            Should be a unit vector. Default is RIGHT (x).
+            gear. Default is RIGHT (x).
         offset: float
             Amount of teeth to be offset in the rack direction.
             Default is 0 which results the center of the rack positioned to the gear.
@@ -2670,11 +2684,17 @@ class InvoluteRack:
             backlash parameter (for tooth modification) is used. Default is None.
         angle_bias: float
             Offset to be used inside backlash. This is a linear shift, but named angle
-            to becompatible with gear meshing. Value 1 shifts completely to the right,
+            to be compatible with gear meshing. Value 1 shifts completely to the right,
             -1 to the left within the backlash play. Default is 0.
         axial_offset: float
-            Axial offset of the rack in the gear's axial direction. Default is 0.
+            Axial offset of the rack in the gear's axial direction in mm. Default is 0.
         """
+
+        if np.abs(self.beta_angle - gear.beta) > DELTA:
+            raise NotImplementedError(
+                "Helix angle of gear-rack combination must match. "
+                "Crossed helical rack alignment not supported."
+            )
         #
         # mult from right: vector in gear's coordinate orientation
         angle_of_target_dir = angle_of_vector_in_xy(
@@ -2702,14 +2722,11 @@ class InvoluteRack:
         )
 
         axial_vector = gear.gearcore.transform.z_axis * axial_offset
-        other_angle_offset = gear.gearcore.shape_recipe(
-            gear.offset_to_z(axial_offset)
-        ).transform.angle
 
         # Shift adjustment due to angle bias needs correction from total backlash
         shift_adjust = (
             angle_bias * backlash * gear.module / (2 * np.cos(self.pressure_angle))
-            + np.tan(gear.beta) * other_angle_offset * gear.pitch_radius
+            + np.tan(self.beta_angle) * axial_offset
         )
         target_dir_norm = np.cross(gear.gearcore.transform.z_axis, target_dir_proj)
 
@@ -2879,7 +2896,9 @@ class HelicalRack(InvoluteRack):
 
         # Apply transformations to position, orient and scale the rack
         self.part_transformed = self.part.translate(self.offset * UP * pitch)
-        self.part_transformed = self.part_transformed.scale(self.module)
+        self.part_transformed = self.part_transformed.scale(
+            self.module, about=bd.Vector(0, 0, 0)
+        )
         rot1 = scp_Rotation.from_matrix(self.orientation)
         degrees = rot1.as_euler("zyx", degrees=True)
         self.part_transformed = (
