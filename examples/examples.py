@@ -69,18 +69,17 @@ def gear_and_rack():
         helix_angle=-PI / 6,
         height=10,
         profile_shift=0.3,
-        herringbone=False,
     )
     rack1 = HelicalRack(
         number_of_teeth=40,
         module=module,
         helix_angle=-PI / 6,
-        height=12,
-        herringbone=False,
+        height=14,
     )
     # racks can mesh to gears, but gears can't (yet) mesh to racks
-    # axial offset used to center the rack, adjust for different heights (10 vs 12)
-    rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-1)
+    # axial offset can be used to adjust the vertical alignment of the rack relative to the gear
+    # now slightly off-center
+    rack1.mesh_to(gear1, target_dir=RIGHT, axial_offset=-3)
 
     gear2 = SpurGear(number_of_teeth=20, module=module, height=10, backlash=0.05)
     gear2.center = LEFT * 50

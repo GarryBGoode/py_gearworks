@@ -804,6 +804,8 @@ class InvoluteGear(GearInfoMixin):
         axial_offset: float = 0.0,
     ):
         """Aligns this gear to another gear object.
+        Raises ValueError when pressure angles of the gears do not match.
+
         Parameters
         ----------
         other: InvoluteGear
@@ -2555,7 +2557,7 @@ class InvoluteRack:
         self.backlash = backlash
 
     def _build_ref_tooth_face(self) -> bd.Face:
-        # defautl construction convention: module = 1
+        # default construction convention: module = 1
         # if module = 1 then linear pitch is PI
         # since gear circumference is D*PI = module * Z * PI = Z*pitch
         # pitch = module*PI = PI
@@ -2665,15 +2667,15 @@ class InvoluteRack:
         axial_offset: float = 0,
     ):
         """Aligns this rack to a gear object.
+        Beta angle (if helical variant) of gear and rack must match.
 
-        Arguments
-        ---------
-        other: InvoluteGear
+        Parameters
+        ----------
+        gear: InvoluteGear
             The other gear object to align to.
         target_dir: np.ndarray
             The direction in which this rack should be placed in relation to the other
-            gear.
-            Should be a unit vector. Default is RIGHT (x).
+            gear. Default is RIGHT (x).
         offset: float
             Amount of teeth to be offset in the rack direction.
             Default is 0 which results the center of the rack positioned to the gear.
@@ -2682,10 +2684,10 @@ class InvoluteRack:
             backlash parameter (for tooth modification) is used. Default is None.
         angle_bias: float
             Offset to be used inside backlash. This is a linear shift, but named angle
-            to becompatible with gear meshing. Value 1 shifts completely to the right,
+            to be compatible with gear meshing. Value 1 shifts completely to the right,
             -1 to the left within the backlash play. Default is 0.
         axial_offset: float
-            Axial offset of the rack in the gear's axial direction. Default is 0.
+            Axial offset of the rack in the gear's axial direction in mm. Default is 0.
         """
 
         if np.abs(self.beta_angle - gear.beta) > DELTA:
